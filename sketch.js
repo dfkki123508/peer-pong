@@ -59,22 +59,32 @@ class Game {
     this.playerSize = { width: 10, height: 70 };
     this.player1StartingPosition = createVector(10, windowHeight / 2);
     this.player2StartingPosition = createVector(windowWidth - 10, windowHeight / 2);
-    this.playerMoveSpeed = 5;
-    this.ballStartingVelocity = createVector(0, 0); //-2.5, 10.2); // TODO: set as random (in range) in reset method
+    this.playerMoveSpeed = 5 * windowHeight / 500;  // empirical value
+    this.ballStartingVelocity = createVector(-2.5, 10.2); // TODO: set as random (in range) in reset method
     this.resetGame();
   }
 
   draw() {
-    this.movePlayers();
     this.player1.draw();
     this.player2.draw();
     this.ball.draw();
+    this.drawScore();
+  }
+
+  drawScore() {
+    textSize(64);
+    textAlign(CENTER, CENTER);
+    fill(255);
+    let gap = 40;
+    text(this.score[0], windowWidth / 2 - gap, 40);
+    text(this.score[1], windowWidth / 2 + gap, 40);
   }
 
   update() {
     this.player1.update();
     this.player2.update();
     if (this.shouldUpdateBall) {
+      this.movePlayers();
       this.ball.update();
       this.detectCollision();
     }
@@ -115,10 +125,10 @@ class Game {
       console.log('LEFT/RIGHT');
       this.shouldUpdateBall = false;
       // TODO:
-      // timeout 
       // update score
       // reset game
       this.resetGame();
+      // setTimeout(this.resetGame, 2000);  // not working
     } else if (this.ball.position.y + this.ball.radius / 2 > windowHeight - sideDist || this.ball.position.y - this.ball.radius / 2 < sideDist) {  // top/bottom
       console.log('TOP/BOTTOM');
       let d = this.ball.velocity;
@@ -127,6 +137,7 @@ class Game {
   }
 
   resetGame() {
+    console.log('reset');
     this.shouldUpdateBall = true;
     this.player1 = new Player(this.player1StartingPosition, this.playerSize);
     this.player2 = new Player(this.player2StartingPosition, this.playerSize);
