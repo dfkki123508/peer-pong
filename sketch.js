@@ -37,6 +37,9 @@ class Game {
   // stats
   playerSize;
 
+  // helpers
+  shouldUpdateBall;
+
   player1;
   player2;
   ball;
@@ -44,9 +47,10 @@ class Game {
   constructor() {
     this.maxBallSpeed = 20;
     this.playerSize = { width: 10, height: 70 };
-    this.player1 = new Player({ x: 10, y: windowHeight / 2 }, this.playerSize);
-    this.player2 = new Player({ x: windowWidth - 10, y: windowHeight / 2 }, this.playerSize);
-    this.ball = new Ball({ x: windowWidth / 2, y: windowHeight / 2 }, {x: 5, y: 1}, 20);
+    this.shouldUpdateBall = true;
+    this.player1 = new Player(createVector(10, windowHeight / 2), this.playerSize);
+    this.player2 = new Player(createVector(windowWidth - 10, windowHeight / 2), this.playerSize);
+    this.ball = new Ball(createVector(windowWidth / 2, windowHeight / 2), createVector(1, 10), 20);
   }
 
   draw() {
@@ -58,13 +62,37 @@ class Game {
   update() {
     this.player1.update();
     this.player2.update();
-    this.ball.update();
+    if (this.shouldUpdateBall) {
+      console.log(this.ball.position, this.ball.velocity);
+      this.ball.update();
+      this.detectCollision();
+    }
   }
 
+  detectCollision() {
+
+    let sideDist = 20;
+
+    // left/right, out of game
+    if (this.ball.position.x > windowWidth - sideDist || this.ball.position.x < sideDist) {
+      console.log('LEFT/RIGHT');
+      this.shouldUpdateBall = false;
+      // TODO:
+      // timeout 
+      // update score
+      // start new
+    } else if (this.ball.position.y > windowHeight - sideDist || this.ball.position.y < sideDist) {  // top/bottom
+      console.log('TOP/BOTTOM');
+      let n = createVector(0, 1); // unit vector
+      let d = this.ball.velocity;
+      this.ball.velocity = d.sub(p5.Vector.mult(n, 2 * n.dot(d))); // refelct with: r = d - 2 *(d.dot(n))n
+    }
+
+  }
 }
 
 class Player {
-  position = { x: undefined, y: undefined };
+  position;
   size = { width: undefined, height: undefined };
 
   constructor(startPosition, startSize) {
@@ -82,8 +110,8 @@ class Player {
 }
 
 class Ball {
-  position = { x: undefined, y: undefined };
-  velocity = { x: undefined, y: undefined };
+  position;
+  velocity;
   radius;
 
   constructor(startPosition, velocity, radius) {
@@ -101,8 +129,7 @@ class Ball {
   }
 
   update() {
-    this.position.x += this.velocity.x;
-    this.position.y += this.velocity.y;
+    this.position.add(this.velocity);
   }
 }
 
