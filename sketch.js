@@ -46,6 +46,8 @@ class Game {
   N_DOWN;
   maxBallSpeed;
 
+  borderWidth;  // should be smaller than maxBallSpeed
+
   // stats
   playerSize;
   player1StartingPosition;
@@ -64,6 +66,7 @@ class Game {
     this.N_LEFT = createVector(1, 0); // unit vector
     this.N_DOWN = createVector(0, 1); // unit vector
     this.maxBallSpeed = 15;
+    this.borderWidth = 10;
     this.playerSize = { width: 10, height: 70 };
     this.player1StartingPosition = createVector(10, windowHeight / 2);
     this.player2StartingPosition = createVector(windowWidth - 10, windowHeight / 2);
@@ -103,22 +106,20 @@ class Game {
   }
 
   movePlayers() {
-    if (keyIsDown(UP_ARROW)) {
+    if (keyIsDown(UP_ARROW) && this.player2.position.y - this.player2.size.height / 2 > this.borderWidth) {
       this.player2.position.y -= this.playerMoveSpeed;
-    } else if (keyIsDown(DOWN_ARROW)) {
+    } else if (keyIsDown(DOWN_ARROW) && this.player2.position.y + this.player2.size.height / 2 < windowHeight - this.borderWidth) {
       this.player2.position.y += this.playerMoveSpeed;
     }
 
-    if (keyIsDown(87)) {
+    if (keyIsDown(87) && this.player1.position.y - this.player1.size.height / 2 > this.borderWidth) {
       this.player1.position.y -= this.playerMoveSpeed;
-    } else if (keyIsDown(83)) {
+    } else if (keyIsDown(83) && this.player1.position.y + this.player1.size.height / 2 < windowHeight - this.borderWidth) {
       this.player1.position.y += this.playerMoveSpeed;
     }
   }
 
   detectCollision() {
-
-    let sideDist = 10;  // should be smaller than maxBallSpeed
 
     // check collision with players
     if ((this.ball.position.x - this.ball.radius / 2 - this.maxBallSpeed < this.player1.position.x + this.player1.size.width / 2 &&
@@ -133,12 +134,12 @@ class Game {
       this.ball.acceleration = this.reflectVector(this.N_LEFT, this.ball.acceleration);
     }
     // check if colliding with borders
-    else if (this.ball.position.x + this.ball.radius / 2 > windowWidth - sideDist || this.ball.position.x - this.ball.radius / 2 < sideDist) { // left/right, out of game
+    else if (this.ball.position.x + this.ball.radius / 2 > windowWidth - this.borderWidth || this.ball.position.x - this.ball.radius / 2 < this.borderWidth) { // left/right, out of game
       console.log('LEFT/RIGHT');
-      let scoreIdx = +(this.ball.position.x + this.ball.radius / 2 > windowWidth - sideDist)
+      let scoreIdx = +!(this.ball.position.x + this.ball.radius / 2 > windowWidth - this.borderWidth)
       this.score[scoreIdx]++;
       this.resetRound(false);
-    } else if (this.ball.position.y + this.ball.radius / 2 > windowHeight - sideDist || this.ball.position.y - this.ball.radius / 2 < sideDist) {  // top/bottom
+    } else if (this.ball.position.y + this.ball.radius / 2 > windowHeight - this.borderWidth || this.ball.position.y - this.ball.radius / 2 < this.borderWidth) {  // top/bottom
       console.log('TOP/BOTTOM');
       this.ball.velocity = this.reflectVector(this.N_DOWN, this.ball.velocity);
       this.ball.acceleration = this.reflectVector(this.N_DOWN, this.ball.acceleration);
@@ -200,7 +201,6 @@ class Ball {
     this.position.add(this.velocity);
     this.velocity.add(this.acceleration);
     this.velocity.limit(this.maxSpeed);
-    console.log(this.velocity.mag());
   }
 }
 
