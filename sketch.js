@@ -30,9 +30,9 @@ function windowResized() {
 }
 
 function keyPressed() {
-  if (keyCode === 32) {
+  if (keyCode === 32) { // SPACE
     if (game) {
-      game.startStop();
+      game.startStop(); // toggle start/stop
       return false; // prevent default
     }
   }
@@ -67,7 +67,7 @@ class Game {
     this.N_DOWN = createVector(0, 1); // unit vector
     this.maxBallSpeed = 15;
     this.borderWidth = 10;
-    this.playerSize = { width: 10, height: 70 };
+    this.playerSize = { width: 10, height: 80 };
     this.player1StartingPosition = createVector(10, windowHeight / 2);
     this.player2StartingPosition = createVector(windowWidth - 10, windowHeight / 2);
     this.playerMoveSpeed = 5 * windowHeight / 500;  // empirical value
@@ -120,7 +120,6 @@ class Game {
   }
 
   detectCollision() {
-
     // check collision with players
     if ((this.ball.position.x - this.ball.radius / 2 - this.maxBallSpeed < this.player1.position.x + this.player1.size.width / 2 &&
       this.ball.position.y - this.ball.radius / 2 < this.player1.position.y + this.player1.size.height / 2 &&
@@ -130,8 +129,8 @@ class Game {
         this.ball.position.y + this.ball.radius / 2 > this.player2.position.y - this.player2.size.height / 2)) {
       console.log('Collision with a player');
       // TODO: modifiy reflection angle depending on the intersection point with the players bar
-      this.ball.velocity = this.reflectVector(this.N_LEFT, this.ball.velocity);
-      this.ball.acceleration = this.reflectVector(this.N_LEFT, this.ball.acceleration);
+      this.ball.velocity = reflectVector(this.N_LEFT, this.ball.velocity);
+      this.ball.acceleration = reflectVector(this.N_LEFT, this.ball.acceleration);
     }
     // check if colliding with borders
     else if (this.ball.position.x + this.ball.radius / 2 > windowWidth - this.borderWidth || this.ball.position.x - this.ball.radius / 2 < this.borderWidth) { // left/right, out of game
@@ -141,13 +140,9 @@ class Game {
       this.resetRound(false);
     } else if (this.ball.position.y + this.ball.radius / 2 > windowHeight - this.borderWidth || this.ball.position.y - this.ball.radius / 2 < this.borderWidth) {  // top/bottom
       console.log('TOP/BOTTOM');
-      this.ball.velocity = this.reflectVector(this.N_DOWN, this.ball.velocity);
-      this.ball.acceleration = this.reflectVector(this.N_DOWN, this.ball.acceleration);
+      this.ball.velocity = reflectVector(this.N_DOWN, this.ball.velocity);
+      this.ball.acceleration = reflectVector(this.N_DOWN, this.ball.acceleration);
     }
-  }
-
-  reflectVector(normal, vec) {
-    return vec.sub(p5.Vector.mult(normal, 2 * normal.dot(vec))); // refelct with: r = d - 2 *(d.dot(n))n
   }
 
   resetRound(start = true) {
@@ -156,7 +151,7 @@ class Game {
     this.player1 = new Player(this.player1StartingPosition.copy(), this.playerSize);
     this.player2 = new Player(this.player2StartingPosition.copy(), this.playerSize);
     let ballStartingVelocity = createVector(rand(-5, 5), rand(-2.5, 2.5));
-    let ballStartingAccelartion = ballStartingVelocity.copy().mult(rand(0.001, 0.01));
+    let ballStartingAccelartion = ballStartingVelocity.copy().mult(rand(0.001, 0.01));  // Has to go in the same direction
     this.ball = new Ball(createVector(windowWidth / 2, windowHeight / 2), ballStartingVelocity, ballStartingAccelartion, 20, this.maxBallSpeed);
   }
 }
@@ -222,6 +217,10 @@ class Background {
 
   }
 
+}
+
+function reflectVector(normal, vec) {
+  return vec.sub(p5.Vector.mult(normal, 2 * normal.dot(vec))); // r = d - 2 *(d.dot(n))n
 }
 
 function rand(min, max) {
