@@ -4,10 +4,10 @@ export default function sketch(p) {
 
   let backgroundGUI;
   let game;
-  let margin = [20, 20];  // top/bottom, left/right
+  const margin = [20, 20];  // top/bottom, left/right
   // TODO: set proper fullscreen
-  let width = window.innerWidth - margin[1];
-  let height = window.innerHeight - margin[0];
+  const width = window.innerWidth - margin[1];
+  const height = window.innerHeight - margin[0];
 
   p.setup = function () {
     p.createCanvas(width, height);
@@ -38,7 +38,6 @@ export default function sketch(p) {
   }
 
   p.keyPressed = function () {
-    // if (window.keyCode === 32) { // SPACE
     if (p.keyIsDown(32)) {
       if (game) {
         game.startStop(); // toggle start/stop
