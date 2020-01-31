@@ -4,10 +4,8 @@ export default function sketch(p) {
 
   let backgroundGUI;
   let game;
-  const margin = [20, 20];  // top/bottom, left/right
-  // TODO: set proper fullscreen
-  const width = window.innerWidth - margin[1];
-  const height = window.innerHeight - margin[0];
+  let width = 0;
+  let height = 0;
 
   p.setup = function () {
     p.createCanvas(width, height);
@@ -23,6 +21,15 @@ export default function sketch(p) {
     game = new Game();
     game.draw();
   }
+
+  p.myCustomRedrawAccordingToNewPropsHandler = function (props) {
+    if (props.width !== null && props.height !== null) {
+      width = props.width;
+      height = props.height;
+      console.log(`NEW width and height: ${width}, ${height}`);
+      p.resizeCanvas(props.width, props.height);
+    }
+  };
 
   p.draw = function () {
     p.background(0);
