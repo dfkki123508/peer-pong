@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import './App.css';
 import P2PService from '../services/P2PService'
 import Game from './Game'
+
+import './App.css';
+
 
 function App() {
   const [anotherPeerId, setAnotherPeerId] = useState(''); // '' is the initial state value
