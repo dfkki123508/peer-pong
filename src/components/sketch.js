@@ -6,6 +6,7 @@ export default function sketch(p) {
   let game;
   let width = 0;
   let height = 0;
+  let onScoreChange = (score) => console.log(score);
 
   p.setup = function () {
     p.createCanvas(width, height);
@@ -29,6 +30,7 @@ export default function sketch(p) {
       console.log(`NEW width and height: ${width}, ${height}`);
       p.resizeCanvas(props.width, props.height);
     }
+    onScoreChange = props.onScoreChange;
   };
 
   p.draw = function () {
@@ -151,6 +153,7 @@ export default function sketch(p) {
         console.log('LEFT/RIGHT');
         let scoreIdx = +!(this.ball.position.x + this.ball.radius / 2 > width - this.borderWidth)
         this.score[scoreIdx]++;
+        onScoreChange(this.score);
         this.resetRound(false);
       } else if (this.ball.position.y + this.ball.radius / 2 > height - this.borderWidth || this.ball.position.y - this.ball.radius / 2 < this.borderWidth) {  // top/bottom
         console.log('TOP/BOTTOM');
