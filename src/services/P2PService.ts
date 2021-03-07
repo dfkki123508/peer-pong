@@ -1,14 +1,14 @@
 import Peer from 'peerjs';
 import React from 'react';
 import { Observable, Subject } from 'rxjs';
-
+import { Message } from '../types/types';
 
 // TODO: maybe embed in mobx store to handle shared variables
 export class P2PService {
   static numInstances = 0;
 
   me: Peer;
-  messageSubject = new Subject();
+  messageSubject = new Subject<Message>();
   idSubject = new Subject<string>(); // TOOD: replace this HACK: will emit new me ids
   newConnection = new Subject();
 
@@ -70,7 +70,7 @@ export class P2PService {
     }
   }
 
-  getMessage(): Subject<unknown> {
+  getMessage(): Subject<Message> {
     return this.messageSubject;
   }
 
@@ -79,6 +79,7 @@ export class P2PService {
       throw new Error('Peer not connected!');
     }
 
+    // Use first data connection, if none specified
     if (!conn) {
       if (Object.keys(this.me.connections).length < 1) {
         throw new Error('No open connection!');
@@ -136,7 +137,11 @@ export class P2PService {
 
   private onData(conn: Peer.DataConnection, data: unknown) {
     console.log('[P2PService] Received data: ', conn, data);
-    this.messageSubject.next(data);
+    try {
+      this.messageSubject.next(JSON.parse(data as string) as Message);
+    } catch (err) {
+      this.messageSubject.error(err);
+    }
   }
 }
 

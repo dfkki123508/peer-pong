@@ -1,8 +1,4 @@
-export enum MESSAGE_EVENTS {
-  'message',
-  'start_game',
-  'move_player',
-}
+import { MESSAGE_EVENTS } from '../types/types';
 
 type EventCallbackType = (msg: string) => unknown;
 

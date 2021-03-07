@@ -2,6 +2,7 @@
 
 import { Console } from 'node:console';
 import { Point } from 'pixi.js';
+import GameConfig from '../config/GameConfig';
 import { BallState } from '../types/types';
 import { multScalar, reflectVector, rotate } from './VectorOperations';
 
@@ -77,6 +78,18 @@ const collissionResponse = (vec: PIXI.Point, angularInfcluence = 0) => {
   return rotate(newVec, alpha);
 };
 
+function checkIfBallMovingTowardsPlayer(
+  ballState: BallState,
+  player: PIXI.Sprite,
+): boolean {
+  return (
+    (player.x > GameConfig.screen.width / 2 && // right
+      ballState.acceleration.x > 0) ||
+    (player.x < GameConfig.screen.width / 2 && // left
+      ballState.acceleration.x < 0)
+  );
+}
+
 export function ballUpdate(
   prevBallState: BallState,
   delta: number,
@@ -87,13 +100,17 @@ export function ballUpdate(
 ): BallState {
   const newState = Object.assign({}, prevBallState);
 
-  if (testForAABB(ball, p1) && newState.acceleration.x < 0) {
+  if (testForAABB(ball, p1) && checkIfBallMovingTowardsPlayer(newState, p1)) {
+    console.log('Collision');
     const angularInfcluence = (ball.y - p1.y) / (p1.height / 2); // 1...-1 depending on ball impact at the player
     newState.acceleration = collissionResponse(
       newState.acceleration,
       angularInfcluence,
     );
-  } else if (testForAABB(ball, p2) && newState.acceleration.x > 0) {
+  } else if (
+    testForAABB(ball, p2) &&
+    checkIfBallMovingTowardsPlayer(newState, p2)
+  ) {
     console.log('Collision');
     const angularInfcluence = (ball.y - p2.y) / (p2.height / 2); // 1...-1 depending on ball impact at the player
     newState.acceleration = collissionResponse(

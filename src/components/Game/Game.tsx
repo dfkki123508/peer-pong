@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { useTick, Container, Sprite, Text } from '@inlet/react-pixi';
 import { TextStyle, Texture } from 'pixi.js';
+import { filter } from 'rxjs/operators';
 import GameConfig, {
   getInitialBallState,
   getInitialPlayerState,
@@ -8,16 +9,23 @@ import GameConfig, {
 import { ballUpdate } from '../../util/Physics';
 import { useP2PService } from '../../services/P2PService';
 import Border from './Border/Border';
-import { GameState, PlayerState } from '../../types/types';
+import {
+  GameState,
+  GAME_STATE,
+  MESSAGE_EVENTS,
+  PlayersSide,
+  PlayerState,
+} from '../../types/types';
 import Countdown from './Countdown/Countdown';
 import Background from './Background/Background';
 
 type GamePropsType = {
   gameState: GameState;
   setGameState: React.Dispatch<React.SetStateAction<GameState>>;
+  playersSide: PlayersSide;
 };
 
-const Game = ({ gameState, setGameState }: GamePropsType) => {
+const Game = ({ gameState, setGameState, playersSide }: GamePropsType) => {
   const p2pService = useP2PService();
 
   const player1Ref = React.createRef<PIXI.Sprite>();
@@ -25,21 +33,14 @@ const Game = ({ gameState, setGameState }: GamePropsType) => {
   const ballRef = React.createRef<PIXI.Sprite>();
   const borderRef = React.createRef<PIXI.Graphics>();
 
-  const playerPositions = [
-    GameConfig.screen.padding,
-    GameConfig.screen.width - GameConfig.screen.padding,
-  ];
-
   const [countdown, setCountdown] = React.useState(
     GameConfig.game.countdownLength,
   );
   const [player1State, setPlayer1State] = React.useState({
     ...getInitialPlayerState(),
-    x: GameConfig.screen.width - GameConfig.screen.padding,
   });
   const [player2State, setPlayer2State] = React.useState({
     ...getInitialPlayerState(),
-    x: GameConfig.screen.padding,
   });
   const [ballState, setBallState] = React.useState(getInitialBallState());
 
@@ -47,6 +48,27 @@ const Game = ({ gameState, setGameState }: GamePropsType) => {
   const dragging = React.useRef(false);
   const waitForRestart = React.useRef(false);
 
+  // Countdown timer
+  React.useEffect(() => {
+    // console.log('useEffect for timer');
+    if (gameState.state === GAME_STATE.PLAYING && countdown > 0) {
+      const timer = setTimeout(() => {
+        setCountdown((prevState) => prevState - 1);
+      }, 1000);
+      // Clear timeout if the component is unmounted
+      return () => clearTimeout(timer);
+    }
+  }, [gameState, countdown]);
+
+  // Finish condition
+  React.useEffect(() => {
+    // console.log('useEffect for timer');
+    if (Math.max(...gameState.score) >= GameConfig.game.finishScore) {
+      setGameState({ ...gameState, state: GAME_STATE.FINISHED });
+    }
+  }, [gameState]);
+
+  // TODO: put this somewhere else, e.g. pyhsics.ts
   const onDragStart = (event: PIXI.InteractionEvent) => {
     // store a reference to the data
     // the reason for this is because of multitouch
@@ -59,35 +81,6 @@ const Game = ({ gameState, setGameState }: GamePropsType) => {
     event.stopPropagation();
   };
 
-  // Countdown timer
-  React.useEffect(() => {
-    // console.log('useEffect for timer');
-    if (gameState.started && countdown > 0) {
-      const timer = setTimeout(() => {
-        setCountdown((prevState) => prevState - 1);
-      }, 1000);
-      // Clear timeout if the component is unmounted
-      return () => clearTimeout(timer);
-    }
-  }, [gameState.started, countdown]);
-
-  React.useEffect(() => {
-    console.log('Switching players');
-    switchPlayer(gameState.switchPlayer);
-  }, [gameState.switchPlayer]);
-
-  // TODO: MAKE WORK
-  const switchPlayer = (pos: boolean) => {
-    setPlayer1State({
-      ...player1State,
-      x: playerPositions[+pos],
-    });
-    setPlayer2State({
-      ...player1State,
-      x: playerPositions[+!pos],
-    });
-  };
-
   const onDragEnd = (event: PIXI.InteractionEvent) => {
     // console.log('end', event);
     setPlayer1State({ ...player1State, alpha: 1.0 });
@@ -96,27 +89,29 @@ const Game = ({ gameState, setGameState }: GamePropsType) => {
   };
 
   const onDragMove = (event: PIXI.InteractionEvent) => {
-    if (dragging.current && dragData.current) {
+    if (dragging.current && dragData.current && player1Ref.current) {
       // console.log('move', event);
-      if (player1Ref.current) {
-        const newPosition = dragData.current.getLocalPosition(
-          player1Ref.current.parent,
-        );
-        setPlayer1State({ ...player1State, y: newPosition.y });
-        event.stopPropagation();
-      }
+      const newPosition = dragData.current.getLocalPosition(
+        player1Ref.current.parent,
+      );
+
+      // TODO: send to remote peer!
+      setPlayer1State({ ...player1State, y: newPosition.y });
+      // event.stopPropagation();
     }
   };
 
   // Register subscription to messages and move player, when there's data.
   React.useEffect(() => {
     console.log('Subscribing to player 2 data');
-    p2pService.getMessage().subscribe((data) => {
-      const newState = JSON.parse(data as string);
-      // console.log('Player 2 moving:', newState);
-      setPlayer2State(newState as PlayerState);
-    });
-  }, []);
+    p2pService
+      .getMessage()
+      .pipe(filter((d) => d['event'] === MESSAGE_EVENTS.move_player))
+      .subscribe((msg) => {
+        console.log('Player 2 moving:', msg);
+        setPlayer2State(msg.data as PlayerState);
+      });
+  }, [p2pService]);
 
   const movePlayer = (dy: number) => {
     setPlayer1State((oldState) => {
@@ -131,9 +126,12 @@ const Game = ({ gameState, setGameState }: GamePropsType) => {
 
       // send to other player
       try {
-        p2pService.sendMessage(newState);
+        p2pService.sendMessage({
+          event: MESSAGE_EVENTS.move_player,
+          data: newState,
+        });
       } catch (err) {
-        // console.error(err);
+        console.error(err);
       }
       return newState;
     });
@@ -166,7 +164,7 @@ const Game = ({ gameState, setGameState }: GamePropsType) => {
   useTick((delta) => {
     if (
       delta &&
-      gameState.started &&
+      gameState.state === GAME_STATE.PLAYING &&
       countdown <= 0 &&
       player1Ref.current &&
       player2Ref.current &&
@@ -238,7 +236,7 @@ const Game = ({ gameState, setGameState }: GamePropsType) => {
       />
       <Sprite
         texture={Texture.WHITE}
-        tint={0xffffff}
+        tint={0x123456}
         height={120}
         anchor={0.5}
         ref={player1Ref}
@@ -247,6 +245,11 @@ const Game = ({ gameState, setGameState }: GamePropsType) => {
         touchmove={onDragMove}
         touchend={onDragEnd}
         touchendoutside={onDragEnd}
+        x={
+          playersSide === 'LEFT'
+            ? GameConfig.screen.padding
+            : GameConfig.screen.width - GameConfig.screen.padding
+        }
         {...player1State}
       />
       <Sprite
@@ -265,6 +268,11 @@ const Game = ({ gameState, setGameState }: GamePropsType) => {
         anchor={0.5}
         height={120}
         ref={player2Ref}
+        x={
+          playersSide === 'RIGHT'
+            ? GameConfig.screen.padding
+            : GameConfig.screen.width - GameConfig.screen.padding
+        }
         {...player2State}
       />
       <Text

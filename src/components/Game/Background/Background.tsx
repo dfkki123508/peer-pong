@@ -21,39 +21,6 @@ type Star = {
   rotation: number;
 };
 
-function createStars(container: PIXI.Container): Array<Star> {
-  // Create the stars
-  const stars = [];
-  for (let i = 0; i < GameConfig.background.numStars; i++) {
-    const star = {
-      sprite: new Sprite(Texture.WHITE),
-      z: 0,
-      x: 0,
-      y: 0,
-    };
-    star.sprite.width = 15;
-    star.sprite.height = 15;
-    star.sprite.anchor.x = 0.5;
-    star.sprite.anchor.y = 0.7;
-    randomizeStar(star, true);
-    container.addChild(star.sprite);
-    stars.push(star);
-  }
-  return stars;
-}
-
-function randomizeStar(star: Star, initial: boolean, cameraZ = 1) {
-  star.z = initial
-    ? Math.random() * 2000
-    : cameraZ + Math.random() * 1000 + 2000; // 2000 - 3000
-
-  // Calculate star positions with radial random coordinate so no star hits the camera.
-  const deg = Math.random() * Math.PI * 2;
-  const distance = Math.random() * 50 + 1;
-  star.x = Math.cos(deg) * distance;
-  star.y = Math.sin(deg) * distance;
-}
-
 function randomStar(minx: number, maxx: number, miny: number, maxy: number) {
   return { u: rand(minx, maxx), v: rand(miny, maxy) };
 }
@@ -73,10 +40,6 @@ function cameraToimage({ x, y, z }: { x: number; y: number; z: number }) {
 
 function moveCameraAlongZ(z: number, dz: number) {
   return z - dz; // camera moves forward, therefore z of star has to shrink
-}
-
-function calcScale(z: number) {
-  return 1 - z / 2000;
 }
 
 type StarPropsType = {
