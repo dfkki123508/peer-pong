@@ -101,7 +101,7 @@ export function ballUpdate(
   const newState = Object.assign({}, prevBallState);
 
   if (testForAABB(ball, p1) && checkIfBallMovingTowardsPlayer(newState, p1)) {
-    console.log('Collision');
+    // console.log('Collision');
     const angularInfcluence = (ball.y - p1.y) / (p1.height / 2); // 1...-1 depending on ball impact at the player
     newState.acceleration = collissionResponse(
       newState.acceleration,
@@ -111,7 +111,7 @@ export function ballUpdate(
     testForAABB(ball, p2) &&
     checkIfBallMovingTowardsPlayer(newState, p2)
   ) {
-    console.log('Collision');
+    // console.log('Collision');
     const angularInfcluence = (ball.y - p2.y) / (p2.height / 2); // 1...-1 depending on ball impact at the player
     newState.acceleration = collissionResponse(
       newState.acceleration,

@@ -32,12 +32,14 @@ export enum MESSAGE_EVENTS {
   'message',
   'start_game',
   'move_player',
+  'ping',
+  'pong',
 }
 
 // TODO: probably can be made generic with type for data prop
-export type Message = {
+export type Message<T = unknown> = {
   event: MESSAGE_EVENTS;
-  data?: unknown;
+  data: T;
 };
 
 export type PlayersSide = 'LEFT' | 'RIGHT';

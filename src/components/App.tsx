@@ -2,7 +2,11 @@ import * as React from 'react';
 import { hot } from 'react-hot-loader';
 import './App.scss';
 import { Stage } from '@inlet/react-pixi';
-import GameConfig, { getInitialGameState } from '../config/GameConfig';
+import GameConfig, {
+  getInitialBallState,
+  getInitialGameState,
+  getInitialPlayerState,
+} from '../config/GameConfig';
 import Game from './Game/Game';
 import { useP2PService } from '../services/P2PService';
 import Menu from './Menu/Menu';
@@ -10,6 +14,7 @@ import Result from './Result/Result';
 import { GAME_STATE, PlayersSide } from '../types/types';
 import ReadyToPlay from './ReadyToPlay/ReadyToPlay';
 import { launchIntoFullscreen } from '../util/Fullscreen';
+import Debug from './Debug/Debug';
 
 function getHashValue(key: string) {
   const matches = location.hash.match(new RegExp(key + '=([^&]*)'));
@@ -21,59 +26,70 @@ const App = () => {
   const [gameState, setGameState] = React.useState(getInitialGameState());
   const [playersSide, setPlayersSide] = React.useState<PlayersSide>('LEFT');
 
-  // If called with connectTo url param, directly connect
+  const [player1State, setPlayer1State] = React.useState(
+    getInitialPlayerState(),
+  );
+  const [player2State, setPlayer2State] = React.useState(
+    getInitialPlayerState(),
+  );
+  const [ballState, setBallState] = React.useState(getInitialBallState());
+
+  // // If called with connectTo url param, directly connect
   React.useEffect(() => {
     const peerId = getHashValue('connectTo');
     if (peerId) {
-      p2pService.idSubject.subscribe((meId) => {
+      const sub = p2pService.peer$.subscribe((peer) => {
         p2pService.connect(peerId);
-        setGameState({ ...gameState, state: GAME_STATE.READY_TO_PLAY });
+        setPlayersSide('RIGHT');
+        // setGameState({ ...gameState, state: GAME_STATE.READY_TO_PLAY });
       });
+      return () => sub.unsubscribe();
     }
   }, []);
 
   // On connection, switch to ready to play
   React.useEffect(() => {
-    p2pService.newConnection.subscribe(() => {
-      setPlayersSide('RIGHT');
-      setGameState({ ...gameState, state: GAME_STATE.READY_TO_PLAY });
+    const sub = p2pService.peer$.subscribe((peer) => {
+      console.log('Checking if there are connections:', peer);
+      if (Object.keys(peer.connections).length > 0) {
+        setGameState((prevState) => ({
+          ...prevState,
+          state: GAME_STATE.READY_TO_PLAY,
+        }));
+      }
     });
-  }, [p2pService.newConnection]);
+    return () => sub.unsubscribe();
+  }, [p2pService.peer$]);
 
-  // TODO: also subscribe to disconnects, and reset to INIT state
+  React.useEffect(() => {
+    const sub = p2pService.peer$.subscribe({
+      next: (peer) => console.log('PEERCHANGED', peer.id, peer),
+      complete: () => console.log('peer cmpleeted'),
+      error: (err) => console.error(err),
+    });
+    return () => sub.unsubscribe();
+  }, [p2pService.peer$]);
+
+  //Register handler on disconnect: reset state to init
+  React.useEffect(() => {
+    console.log('Registering message subscription');
+    if (p2pService.message$) {
+      const sub = p2pService.message$.subscribe({
+        complete: () => {
+          console.log('Disconnected!!!');
+          setGameState({ ...gameState, state: GAME_STATE.INIT });
+        },
+      });
+      return () => sub.unsubscribe();
+    }
+  }, [p2pService.message$]);
 
   // Launch fullscreen when switching to ready to play
-  React.useEffect(() => {
-    if (gameState.state === GAME_STATE.READY_TO_PLAY) {
-      launchIntoFullscreen(document.documentElement);
-    }
-  }, [gameState.state]);
-
-  // DEBUG
   // React.useEffect(() => {
-  //   console.log('Update app: changing game state in 3s', gameState);
-  //   if (gameState.state === GAME_STATE.INIT) {
-  //     setTimeout(
-  //       () => setGameState({ ...gameState, state: GAME_STATE.READY_TO_PLAY }),
-  //       3000,
-  //     );
-  //   } else if (gameState.state === GAME_STATE.READY_TO_PLAY) {
-  //     setTimeout(
-  //       () => setGameState({ ...gameState, state: GAME_STATE.PLAYING }),
-  //       3000,
-  //     );
-  //   } else if (gameState.state === GAME_STATE.PLAYING) {
-  //     setTimeout(
-  //       () => setGameState({ ...gameState, state: GAME_STATE.FINISHED }),
-  //       3000,
-  //     );
-  //   } else if (gameState.state === GAME_STATE.FINISHED) {
-  //     setTimeout(
-  //       () => setGameState({ ...gameState, state: GAME_STATE.INIT }), // loop
-  //       3000,
-  //     );
+  //   if (gameState.state === GAME_STATE.READY_TO_PLAY) {
+  //     launchIntoFullscreen(document.documentElement);
   //   }
-  // }, [gameState]);
+  // }, [gameState.state]);
 
   return (
     <div className="app-container">
@@ -88,27 +104,43 @@ const App = () => {
         >
           <Game
             gameState={gameState}
+            player1State={player1State}
+            player2State={player2State}
+            ballState={ballState}
             setGameState={setGameState}
+            setPlayer1State={setPlayer1State}
+            setPlayer2State={setPlayer2State}
+            setBallState={setBallState}
             playersSide={playersSide}
           />
         </Stage>
       </div>
       {/* TODO: check if removing the menus completely from the DOM (instead of hiding) makes more sense */}
-      <Menu
-        open={gameState.state === GAME_STATE.INIT}
-        gameState={gameState}
-        setGameState={setGameState}
-      />
-      <ReadyToPlay
-        open={gameState.state === GAME_STATE.READY_TO_PLAY}
-        gameState={gameState}
-        setGameState={setGameState}
-      />
-      <Result
-        open={gameState.state === GAME_STATE.FINISHED}
-        gameState={gameState}
-        setGameState={setGameState}
-      />
+      {gameState.state === GAME_STATE.INIT && (
+        <Menu
+          open={gameState.state === GAME_STATE.INIT}
+          gameState={gameState}
+          setGameState={setGameState}
+          setPlayersSide={setPlayersSide}
+        />
+      )}
+      {gameState.state === GAME_STATE.READY_TO_PLAY && (
+        <ReadyToPlay
+          open={gameState.state === GAME_STATE.READY_TO_PLAY}
+          gameState={gameState}
+          setGameState={setGameState}
+          ballState={ballState}
+          setBallState={setBallState}
+        />
+      )}
+      {gameState.state === GAME_STATE.FINISHED && (
+        <Result
+          open={gameState.state === GAME_STATE.FINISHED}
+          gameState={gameState}
+          setGameState={setGameState}
+        />
+      )}
+      <Debug />
     </div>
   );
 };

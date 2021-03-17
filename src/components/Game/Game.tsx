@@ -10,6 +10,7 @@ import { ballUpdate } from '../../util/Physics';
 import { useP2PService } from '../../services/P2PService';
 import Border from './Border/Border';
 import {
+  BallState,
   GameState,
   GAME_STATE,
   MESSAGE_EVENTS,
@@ -22,10 +23,26 @@ import Background from './Background/Background';
 type GamePropsType = {
   gameState: GameState;
   setGameState: React.Dispatch<React.SetStateAction<GameState>>;
+  player1State: PlayerState;
+  setPlayer1State: React.Dispatch<React.SetStateAction<PlayerState>>;
+  player2State: PlayerState;
+  setPlayer2State: React.Dispatch<React.SetStateAction<PlayerState>>;
+  ballState: BallState;
+  setBallState: React.Dispatch<React.SetStateAction<BallState>>;
   playersSide: PlayersSide;
 };
 
-const Game = ({ gameState, setGameState, playersSide }: GamePropsType) => {
+const Game = ({
+  gameState,
+  setGameState,
+  playersSide,
+  player1State,
+  setPlayer1State,
+  player2State,
+  setPlayer2State,
+  ballState,
+  setBallState,
+}: GamePropsType) => {
   const p2pService = useP2PService();
 
   const player1Ref = React.createRef<PIXI.Sprite>();
@@ -36,13 +53,6 @@ const Game = ({ gameState, setGameState, playersSide }: GamePropsType) => {
   const [countdown, setCountdown] = React.useState(
     GameConfig.game.countdownLength,
   );
-  const [player1State, setPlayer1State] = React.useState({
-    ...getInitialPlayerState(),
-  });
-  const [player2State, setPlayer2State] = React.useState({
-    ...getInitialPlayerState(),
-  });
-  const [ballState, setBallState] = React.useState(getInitialBallState());
 
   const dragData = React.useRef<PIXI.InteractionData>();
   const dragging = React.useRef(false);
@@ -63,7 +73,10 @@ const Game = ({ gameState, setGameState, playersSide }: GamePropsType) => {
   // Finish condition
   React.useEffect(() => {
     // console.log('useEffect for timer');
-    if (Math.max(...gameState.score) >= GameConfig.game.finishScore) {
+    if (
+      gameState.state != GAME_STATE.FINISHED &&
+      Math.max(...gameState.score) >= GameConfig.game.finishScore
+    ) {
       setGameState({ ...gameState, state: GAME_STATE.FINISHED });
     }
   }, [gameState]);
@@ -103,15 +116,17 @@ const Game = ({ gameState, setGameState, playersSide }: GamePropsType) => {
 
   // Register subscription to messages and move player, when there's data.
   React.useEffect(() => {
-    console.log('Subscribing to player 2 data');
-    p2pService
-      .getMessage()
-      .pipe(filter((d) => d['event'] === MESSAGE_EVENTS.move_player))
-      .subscribe((msg) => {
-        console.log('Player 2 moving:', msg);
-        setPlayer2State(msg.data as PlayerState);
-      });
-  }, [p2pService]);
+    console.log('Subscribing to player 2 data', p2pService.message$);
+    if (p2pService.message$) {
+      const sub = p2pService.message$
+        .pipe(filter((d) => d['event'] === MESSAGE_EVENTS.move_player))
+        .subscribe({
+          next: (msg) => setPlayer2State(msg.data as PlayerState),
+          complete: () => resetObjects(),
+        });
+      return () => sub.unsubscribe();
+    }
+  }, [p2pService.message$]);
 
   const movePlayer = (dy: number) => {
     setPlayer1State((oldState) => {
@@ -204,7 +219,7 @@ const Game = ({ gameState, setGameState, playersSide }: GamePropsType) => {
     }
   });
 
-  const nextRound = () => {
+  const resetObjects = () => {
     setBallState((prevState) => ({
       ...prevState,
       ...getInitialBallState(),
@@ -218,6 +233,10 @@ const Game = ({ gameState, setGameState, playersSide }: GamePropsType) => {
       ...getInitialPlayerState(),
     }));
     setCountdown(GameConfig.game.countdownLength);
+  };
+
+  const nextRound = () => {
+    resetObjects();
     waitForRestart.current = false;
   };
 
