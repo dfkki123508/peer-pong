@@ -13,6 +13,8 @@
 - notifications about errors etc.
 - Sync game state:
     * https://developer.valvesoftware.com/wiki/Source_Multiplayer_Networking
+    * https://gamedevelopment.tutsplus.com/tutorials/building-a-peer-to-peer-multiplayer-networked-game--gamedev-10074
+    * https://medium.com/@qingweilim/how-do-multiplayer-game-sync-their-state-part-2-d746fa303950
     * Calculate lag:
         - Compare send and receive timestamps of messages
 
