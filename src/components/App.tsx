@@ -11,7 +11,7 @@ import Game from './Game/Game';
 import { useP2PService } from '../services/P2PService';
 import Menu from './Menu/Menu';
 import Result from './Result/Result';
-import { GAME_STATE, PlayersSide } from '../types/types';
+import { GAME_STEP, PlayersSide } from '../types/types';
 import ReadyToPlay from './ReadyToPlay/ReadyToPlay';
 import { launchIntoFullscreen } from '../util/Fullscreen';
 import Debug from './Debug/Debug';
@@ -54,7 +54,7 @@ const App = () => {
       if (Object.keys(peer.connections).length > 0) {
         setGameState((prevState) => ({
           ...prevState,
-          state: GAME_STATE.READY_TO_PLAY,
+          step: GAME_STEP.READY_TO_PLAY,
         }));
       }
     });
@@ -77,7 +77,7 @@ const App = () => {
       const sub = p2pService.message$.subscribe({
         complete: () => {
           console.log('Disconnected!!!');
-          setGameState({ ...gameState, state: GAME_STATE.INIT });
+          setGameState({ ...gameState, step: GAME_STEP.INIT });
         },
       });
       return () => sub.unsubscribe();
@@ -116,26 +116,26 @@ const App = () => {
         </Stage>
       </div>
       {/* TODO: check if removing the menus completely from the DOM (instead of hiding) makes more sense */}
-      {gameState.state === GAME_STATE.INIT && (
+      {/* {gameState.step === GAME_STEP.INIT && (
         <Menu
-          open={gameState.state === GAME_STATE.INIT}
+          open={gameState.step === GAME_STEP.INIT}
           gameState={gameState}
           setGameState={setGameState}
           setPlayersSide={setPlayersSide}
         />
-      )}
-      {gameState.state === GAME_STATE.READY_TO_PLAY && (
+      )} */}
+      {gameState.step === GAME_STEP.READY_TO_PLAY && (
         <ReadyToPlay
-          open={gameState.state === GAME_STATE.READY_TO_PLAY}
+          open={gameState.step === GAME_STEP.READY_TO_PLAY}
           gameState={gameState}
           setGameState={setGameState}
           ballState={ballState}
           setBallState={setBallState}
         />
       )}
-      {gameState.state === GAME_STATE.FINISHED && (
+      {gameState.step === GAME_STEP.FINISHED && (
         <Result
-          open={gameState.state === GAME_STATE.FINISHED}
+          open={gameState.step === GAME_STEP.FINISHED}
           gameState={gameState}
           setGameState={setGameState}
         />

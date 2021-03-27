@@ -95,6 +95,6 @@ export class P2PService {
   }
 }
 
-export const P2PServiceInstance = new P2PService();
+export const P2PServiceInstance = new P2PService(); // TODO: check if multiple instance are created!!
 export const P2PServiceContext = React.createContext(P2PServiceInstance);
 export const useP2PService = () => React.useContext(P2PServiceContext);

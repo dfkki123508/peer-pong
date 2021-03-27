@@ -4,7 +4,7 @@ import { useP2PService } from '../../services/P2PService';
 import {
   BallState,
   GameState,
-  GAME_STATE,
+  GAME_STEP,
   MESSAGE_EVENTS,
 } from '../../types/types';
 import MenuWrapper from '../MenuWrapper/MenuWrapper';
@@ -32,7 +32,7 @@ const ReadyToPlay = ({
       event: MESSAGE_EVENTS.start_game,
       data: ballState,
     });
-    setGameState({ ...gameState, state: GAME_STATE.PLAYING });
+    setGameState({ ...gameState, step: GAME_STEP.PLAYING });
   };
 
   React.useEffect(() => {
@@ -43,7 +43,7 @@ const ReadyToPlay = ({
         .subscribe((msg) => {
           console.log('Starting game!', msg);
           // setBallState(msg.data);
-          setGameState({ ...gameState, state: GAME_STATE.PLAYING });
+          setGameState({ ...gameState, step: GAME_STEP.PLAYING });
         });
       return () => sub.unsubscribe();
     }

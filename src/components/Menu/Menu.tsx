@@ -2,7 +2,7 @@ import React from 'react';
 import './Menu.scss';
 import { useP2PService } from '../../services/P2PService';
 import QRCode from 'qrcode.react';
-import { GameState, GAME_STATE, PlayersSide } from '../../types/types';
+import { GameState, GAME_STEP, PlayersSide } from '../../types/types';
 import MenuWrapper from '../MenuWrapper/MenuWrapper';
 
 type MenuPropsType = {

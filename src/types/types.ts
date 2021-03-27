@@ -16,12 +16,12 @@ export type PlayerState = {
 };
 
 export type GameState = {
-  state: GAME_STATE;
+  step: GAME_STEP;
   score: [number, number];
   switchPlayer: boolean; // TODO: solve somehow else
 };
 
-export enum GAME_STATE {
+export enum GAME_STEP {
   'INIT', // implies menu open
   'READY_TO_PLAY', // implies ready_to_play menu open
   'PLAYING', // implies game start

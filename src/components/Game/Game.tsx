@@ -6,19 +6,20 @@ import GameConfig, {
   getInitialBallState,
   getInitialPlayerState,
 } from '../../config/GameConfig';
-import { ballUpdate } from '../../util/Physics';
+import { ballUpdate, checkIfObjectInCanvas } from '../../util/Physics';
 import { useP2PService } from '../../services/P2PService';
 import Border from './Border/Border';
 import {
   BallState,
   GameState,
-  GAME_STATE,
+  GAME_STEP,
   MESSAGE_EVENTS,
   PlayersSide,
   PlayerState,
 } from '../../types/types';
 import Countdown from './Countdown/Countdown';
 import Background from './Background/Background';
+import { useTouchEvents } from '../../util/UseTouchEvents';
 
 type GamePropsType = {
   gameState: GameState;
@@ -49,19 +50,18 @@ const Game = ({
   const player2Ref = React.createRef<PIXI.Sprite>();
   const ballRef = React.createRef<PIXI.Sprite>();
   const borderRef = React.createRef<PIXI.Graphics>();
+  const waitForRestart = React.useRef(false);
+
+  const touchEvents = useTouchEvents(player1State, setPlayer1State, player1Ref);
 
   const [countdown, setCountdown] = React.useState(
     GameConfig.game.countdownLength,
   );
 
-  const dragData = React.useRef<PIXI.InteractionData>();
-  const dragging = React.useRef(false);
-  const waitForRestart = React.useRef(false);
-
   // Countdown timer
   React.useEffect(() => {
     // console.log('useEffect for timer');
-    if (gameState.state === GAME_STATE.PLAYING && countdown > 0) {
+    if (gameState.step === GAME_STEP.PLAYING && countdown > 0) {
       const timer = setTimeout(() => {
         setCountdown((prevState) => prevState - 1);
       }, 1000);
@@ -74,45 +74,12 @@ const Game = ({
   React.useEffect(() => {
     // console.log('useEffect for timer');
     if (
-      gameState.state != GAME_STATE.FINISHED &&
+      gameState.step != GAME_STEP.FINISHED &&
       Math.max(...gameState.score) >= GameConfig.game.finishScore
     ) {
-      setGameState({ ...gameState, state: GAME_STATE.FINISHED });
+      setGameState({ ...gameState, step: GAME_STEP.FINISHED });
     }
   }, [gameState]);
-
-  // TODO: put this somewhere else, e.g. pyhsics.ts
-  const onDragStart = (event: PIXI.InteractionEvent) => {
-    // store a reference to the data
-    // the reason for this is because of multitouch
-    // we want to track the movement of this particular touch
-    // console.log('DRAGSTART', event);
-
-    setPlayer1State({ ...player1State, alpha: 0.5 });
-    dragData.current = event.data;
-    dragging.current = true;
-    event.stopPropagation();
-  };
-
-  const onDragEnd = (event: PIXI.InteractionEvent) => {
-    // console.log('end', event);
-    setPlayer1State({ ...player1State, alpha: 1.0 });
-    dragData.current = undefined;
-    dragging.current = false;
-  };
-
-  const onDragMove = (event: PIXI.InteractionEvent) => {
-    if (dragging.current && dragData.current && player1Ref.current) {
-      // console.log('move', event);
-      const newPosition = dragData.current.getLocalPosition(
-        player1Ref.current.parent,
-      );
-
-      // TODO: send to remote peer!
-      setPlayer1State({ ...player1State, y: newPosition.y });
-      // event.stopPropagation();
-    }
-  };
 
   // Register subscription to messages and move player, when there's data.
   React.useEffect(() => {
@@ -179,7 +146,7 @@ const Game = ({
   useTick((delta) => {
     if (
       delta &&
-      gameState.state === GAME_STATE.PLAYING &&
+      gameState.step === GAME_STEP.PLAYING &&
       countdown <= 0 &&
       player1Ref.current &&
       player2Ref.current &&
@@ -191,12 +158,7 @@ const Game = ({
       const ball = ballRef.current;
       const border = borderRef.current;
 
-      if (
-        ball.x > 0 &&
-        ball.x < GameConfig.screen.width &&
-        ball.y > 0 &&
-        ball.y < GameConfig.screen.height
-      ) {
+      if (checkIfObjectInCanvas(ball)) {
         setBallState((prevState) =>
           ballUpdate(prevState, delta, p1, p2, ball, border),
         );
@@ -260,15 +222,13 @@ const Game = ({
         anchor={0.5}
         ref={player1Ref}
         interactive
-        touchstart={onDragStart}
-        touchmove={onDragMove}
-        touchend={onDragEnd}
-        touchendoutside={onDragEnd}
+        // TODO: mask or wrap this sprite to have bigger region to tap on and move this object via touch screen
         x={
           playersSide === 'LEFT'
             ? GameConfig.screen.padding
             : GameConfig.screen.width - GameConfig.screen.padding
         }
+        {...touchEvents}
         {...player1State}
       />
       <Sprite

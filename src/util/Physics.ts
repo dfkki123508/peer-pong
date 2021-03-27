@@ -90,6 +90,15 @@ function checkIfBallMovingTowardsPlayer(
   );
 }
 
+export function checkIfObjectInCanvas(obj: PIXI.Sprite): boolean {
+  return (
+    obj.x > 0 &&
+    obj.x < GameConfig.screen.width &&
+    obj.y > 0 &&
+    obj.y < GameConfig.screen.height
+  );
+}
+
 export function ballUpdate(
   prevBallState: BallState,
   delta: number,

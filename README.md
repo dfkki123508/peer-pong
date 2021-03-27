@@ -11,12 +11,18 @@
 
 - loading screens (mat.ui: progress)
 - notifications about errors etc.
-- Sync game state:
+- Sync game state/network latency:
     * https://developer.valvesoftware.com/wiki/Source_Multiplayer_Networking
-    * https://gamedevelopment.tutsplus.com/tutorials/building-a-peer-to-peer-multiplayer-networked-game--gamedev-10074
+    * https://gamedevelopment.tutsplus.com/tutorials/building-a-peer-to-peer-multiplayer-networked-game--gamedev-10074 
+        -> interpolate between remote player updates to move the player smoothly
+        -> extrapolate/project remote player state assuming it moves consistantly (current movement is pertained)
+
     * https://medium.com/@qingweilim/how-do-multiplayer-game-sync-their-state-part-2-d746fa303950
     * Calculate lag:
         - Compare send and receive timestamps of messages
+    * ideas:
+	* use the calculation of a collision with a player from there where the player is local -> remote player simulates collision but receives authoritive update and has to correct the state
+	* 
 
 # Steps
 1. Enter connection string of peer -> connect
