@@ -16,6 +16,7 @@ import {
   localPlayerStateSubject,
   remotePlayerStateSubject,
 } from '../../services/GameStore';
+import { useTouchEvents } from '../../util/UseTouchEvents';
 
 const Game = () => {
   const gameController = GameController.getInstance();
@@ -33,9 +34,12 @@ const Game = () => {
   const remotePlayerRef = React.createRef<PIXI.Sprite>();
   const ballRef = React.createRef<PIXI.Sprite>();
   const borderRef = React.createRef<PIXI.Graphics>();
-  const waitForRestart = React.useRef(false);
 
-  // const touchEvents = useTouchEvents(player1State, setPlayer1State, player1Ref);
+  const touchEvents = useTouchEvents(
+    localPlayerState,
+    setLocalPlayerState,
+    localPlayerRef,
+  );
 
   const countdown = useObservable(countdownTimer.observable$);
 
@@ -87,7 +91,7 @@ const Game = () => {
         ref={localPlayerRef}
         interactive
         // TODO: mask or wrap this sprite to have bigger region to tap on and move this object via touch screen
-        // {...touchEvents}
+        {...touchEvents}
         {...localPlayerState}
       />
       <Sprite

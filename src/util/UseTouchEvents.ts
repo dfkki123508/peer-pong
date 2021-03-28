@@ -1,9 +1,12 @@
 import React, { useCallback, useRef } from 'react';
+import { P2PServiceInstance } from '../services/P2PService';
+import { MESSAGE_EVENTS } from '../types/types';
 
 export function useTouchEvents<T>(
   state: T,
-  setState: React.Dispatch<React.SetStateAction<T>>,
+  setState: React.Dispatch<React.SetStateAction<T>> | ((state: T) => void),
   playerRef: React.RefObject<PIXI.Sprite>,
+  movePlayer: () => void,
 ): {
   touchstart: (event: PIXI.InteractionEvent) => void;
   touchmove: () => void;
@@ -37,9 +40,17 @@ export function useTouchEvents<T>(
         playerRef.current.parent,
       );
 
-      // TODO: send to remote peer!
+      // send to remote peer
+      try {
+        P2PServiceInstance.sendMessage({
+          event: MESSAGE_EVENTS.move_player,
+          data: { y: newPosition.y },
+        });
+      } catch (err) {
+        console.error(err);
+      }
+
       setState({ ...state, y: newPosition.y });
-      // event.stopPropagation();
     }
   }, [state, setState, dragData, dragging, playerRef]);
 

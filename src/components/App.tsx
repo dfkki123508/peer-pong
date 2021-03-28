@@ -19,8 +19,6 @@ import { useSharedState } from '../util/UseObservable';
 import { gameStateSubject } from '../services/GameStore';
 
 const App = () => {
-  const p2pService = useP2PService();
-  const gameController = GameController.getInstance();
   const [gameState, setGameState] = useSharedState(gameStateSubject);
 
   return (
@@ -37,7 +35,6 @@ const App = () => {
           <Game />
         </Stage>
       </div>
-      {/* TODO: check if removing the menus completely from the DOM (instead of hiding) makes more sense */}
       {gameState.step === GAME_STEP.INIT && (
         <Menu open={gameState.step === GAME_STEP.INIT} />
       )}
