@@ -1,6 +1,6 @@
-import { MESSAGE_EVENTS } from '../types/types';
+import { Message, MESSAGE_EVENTS } from '../types/types';
 
-type EventCallbackType = (msg: string) => unknown;
+type EventCallbackType = (msg: Message) => unknown;
 
 class MessageDispatcher {
   private callbacks = new Map<MESSAGE_EVENTS, EventCallbackType>();
@@ -13,14 +13,14 @@ class MessageDispatcher {
     return this.callbacks.delete(event);
   }
 
-  dispatch(msg: string): unknown {
+  dispatch(msg: Message): unknown {
     try {
-      const msgObj = JSON.parse(msg);
-      const event = msgObj['event'];
+      const event = msg['event'];
       const cb = this.callbacks.get(event);
-      return cb(msg);
+      if (cb) return cb(msg);
     } catch (err) {
       console.error(err);
+    } finally {
       return msg;
     }
   }

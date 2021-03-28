@@ -1,5 +1,5 @@
 import { Point } from 'pixi.js';
-import { BallState, GameState, GAME_STATE, PlayerState } from '../types/types';
+import { BallState, GameState, GAME_STEP, PlayerState } from '../types/types';
 import { rand } from '../util/Physics';
 
 const GameConfig = {
@@ -32,7 +32,10 @@ export const getInitialBallState = (): BallState => ({
   ),
 });
 
-export const getInitialPlayerState = (): PlayerState => ({
+export const getInitialPlayerState = (player: 0 | 1): PlayerState => ({
+  x: player
+    ? GameConfig.screen.padding
+    : GameConfig.screen.width - GameConfig.screen.padding,
   y: GameConfig.screen.height / 2,
   sy: GameConfig.player.moveSpeed,
   dxt: Date.now(),
@@ -41,9 +44,8 @@ export const getInitialPlayerState = (): PlayerState => ({
 });
 
 export const getInitialGameState = (): GameState => ({
-  state: GAME_STATE.INIT,
+  step: GAME_STEP.INIT,
   score: [0, 0],
-  switchPlayer: false,
 });
 
 export default GameConfig;

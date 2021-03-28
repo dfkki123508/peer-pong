@@ -5,6 +5,7 @@ import { Message } from '../types/types';
 
 export class P2PService {
   peer$ = new Subject<Peer>();
+  conn$ = new Subject<Subject<Message> | null>();
   message$: Subject<Message> | undefined;
 
   private me: Peer;
@@ -26,6 +27,7 @@ export class P2PService {
     // TODO: add check to only allow one connection
 
     this.message$ = new Subject<Message>();
+    this.conn$.next(this.message$);
     conn.on('error', (err) => console.error(err));
     conn.on('open', () => this.peer$.next(this.me));
     conn.on('data', (data: unknown) =>
@@ -95,6 +97,6 @@ export class P2PService {
   }
 }
 
-export const P2PServiceInstance = new P2PService();
+export const P2PServiceInstance = new P2PService(); // TODO: check if multiple instance are created!!
 export const P2PServiceContext = React.createContext(P2PServiceInstance);
 export const useP2PService = () => React.useContext(P2PServiceContext);
