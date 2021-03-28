@@ -1,9 +1,10 @@
 import { BehaviorSubject } from 'rxjs';
-import {
+import GameConfig, {
   getInitialBallState,
   getInitialGameState,
   getInitialPlayerState,
 } from '../config/GameConfig';
+import { Timer } from '../util/Timer';
 
 export class UpdateSubject<T> extends BehaviorSubject<T> {
   update(fn: (oldState: T) => T): void {
@@ -20,3 +21,5 @@ export const remotePlayerStateSubject = new UpdateSubject(
   getInitialPlayerState(1),
 );
 export const ballStateSubject = new UpdateSubject(getInitialBallState());
+
+export const countdownTimer = new Timer(GameConfig.game.countdownLength);

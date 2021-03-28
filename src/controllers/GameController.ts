@@ -1,7 +1,13 @@
 import { Observer } from 'rxjs';
-import GameConfig, { getInitialGameState } from '../config/GameConfig';
+import { map, take } from 'rxjs/operators';
+import GameConfig, {
+  getInitialBallState,
+  getInitialGameState,
+  getInitialPlayerState,
+} from '../config/GameConfig';
 import {
   ballStateSubject,
+  countdownTimer,
   gameStateSubject,
   localPlayerStateSubject,
   remotePlayerStateSubject,
@@ -15,6 +21,7 @@ import {
   MESSAGE_EVENTS,
   PlayerState,
 } from '../types/types';
+import { ballUpdate, checkIfObjectInCanvas } from '../util/Physics';
 import { getHashValue } from '../util/UiHelpers';
 
 export class GameController {
@@ -28,6 +35,9 @@ export class GameController {
   private localPlayerState = localPlayerStateSubject;
   private remotePlayerState = remotePlayerStateSubject;
   private ballState = ballStateSubject;
+  private countdownTimer = countdownTimer;
+
+  private pause = false;
 
   private constructor() {
     GameController.numInstances++;
@@ -35,7 +45,9 @@ export class GameController {
     console.log('p2pservice:', this.p2pService);
 
     this.updateRemotePlayer = this.updateRemotePlayer.bind(this);
+    this.gameStateObserver = this.gameStateObserver.bind(this);
     this.startGame = this.startGame.bind(this);
+    this.resetGame = this.resetGame.bind(this);
 
     this.messageDispatcher = new MessageDispatcher();
     this.messageDispatcher.registerCallback(
@@ -78,7 +90,7 @@ export class GameController {
     console.log('New game state!', gameState);
     if (
       gameState.step != GAME_STEP.FINISHED &&
-      Math.max(...gameState.score) >= GameConfig.game.finishScore
+      Math.max(...gameState.score) >= 2 //GameConfig.game.finishScore
     ) {
       this.gameState.update((x) => ({ ...x, step: GAME_STEP.FINISHED }));
     }
@@ -101,6 +113,7 @@ export class GameController {
         data: this.ballState.getValue(),
       });
     }
+    this.resetCountdown();
     this.gameState.update((oldState) => ({
       ...oldState,
       step: GAME_STEP.PLAYING,
@@ -110,22 +123,24 @@ export class GameController {
   resetGame(): void {
     console.log('Resetting game...');
     this.gameState.next(getInitialGameState());
-    // TODO ...
-    // const resetObjects = () => {
-    //   setBallState((prevState) => ({
-    //     ...prevState,
-    //     ...getInitialBallState(),
-    //   }));
-    //   setPlayer1State((prevState) => ({
-    //     ...prevState,
-    //     ...getInitialPlayerState(),
-    //   }));
-    //   setPlayer2State((prevState) => ({
-    //     ...prevState,
-    //     ...getInitialPlayerState(),
-    //   }));
-    //   setCountdown(GameConfig.game.countdownLength);
-    // };
+    this.resetRound();
+  }
+
+  resetRound(): void {
+    this.localPlayerState.update((oldState) => ({
+      ...getInitialPlayerState(0),
+      x: oldState.x,
+    }));
+    this.remotePlayerState.update((oldState) => ({
+      ...getInitialPlayerState(1),
+      x: oldState.x,
+    }));
+    this.ballState.next(getInitialBallState());
+    this.resetCountdown();
+  }
+
+  resetCountdown(): void {
+    this.countdownTimer.start();
   }
 
   swapPlayersSides(): void {
@@ -172,10 +187,48 @@ export class GameController {
     this.remotePlayerState.update((x) => ({ ...x, ...message.data }));
   }
 
-  // tick() {}
-  // score(player: 0 | 1) {
-  //   const state = this.store.getState();
-  //   state.score[player]++;
-  //   this.store.setScore(state.score);
-  // }
+  tick(
+    delta: number | undefined,
+    p1: PIXI.Sprite | null,
+    p2: PIXI.Sprite | null,
+    ball: PIXI.Sprite | null,
+    border: PIXI.Graphics | null,
+    countdown: number | undefined,
+  ): void {
+    if (
+      this.gameState.getValue().step === GAME_STEP.PLAYING &&
+      countdown != null &&
+      countdown <= 0 &&
+      delta &&
+      p1 &&
+      p2 &&
+      ball &&
+      border &&
+      !this.pause
+    ) {
+      if (checkIfObjectInCanvas(ball)) {
+        this.ballState.update((prevState) =>
+          ballUpdate(prevState, delta, p1, p2, ball, border),
+        );
+      } else {
+        this.pause = true;
+
+        const scoreIdx = +!(
+          ball.x + ball.width / 2 >
+          GameConfig.screen.width - GameConfig.screen.padding
+        );
+        console.log('SCORE!');
+        this.gameState.update((oldGameState: GameState) => {
+          const newState = Object.assign({}, oldGameState) as GameState;
+          newState.score[scoreIdx]++;
+          return newState;
+        });
+
+        setTimeout(() => {
+          this.resetRound();
+          this.pause = false;
+        }, 2000);
+      }
+    }
+  }
 }

@@ -23,15 +23,6 @@ const App = () => {
   const gameController = GameController.getInstance();
   const [gameState, setGameState] = useSharedState(gameStateSubject);
 
-  // React.useEffect(() => {
-  //   const sub = p2pService.peer$.subscribe({
-  //     next: (peer) => console.log('PEERCHANGED', peer.id, peer),
-  //     complete: () => console.log('peer cmpleeted'),
-  //     error: (err) => console.error(err),
-  //   });
-  //   return () => sub.unsubscribe();
-  // }, [p2pService.peer$]);
-
   return (
     <div className="app-container">
       <div className="game-container">
