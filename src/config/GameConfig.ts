@@ -32,7 +32,10 @@ export const getInitialBallState = (): BallState => ({
   ),
 });
 
-export const getInitialPlayerState = (): PlayerState => ({
+export const getInitialPlayerState = (player: 0 | 1): PlayerState => ({
+  x: player
+    ? GameConfig.screen.padding
+    : GameConfig.screen.width - GameConfig.screen.padding,
   y: GameConfig.screen.height / 2,
   sy: GameConfig.player.moveSpeed,
   dxt: Date.now(),
@@ -43,7 +46,6 @@ export const getInitialPlayerState = (): PlayerState => ({
 export const getInitialGameState = (): GameState => ({
   step: GAME_STEP.INIT,
   score: [0, 0],
-  switchPlayer: false,
 });
 
 export default GameConfig;

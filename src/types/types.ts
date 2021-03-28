@@ -8,6 +8,7 @@ export type BallState = {
 };
 
 export type PlayerState = {
+  x: number;
   y: number;
   sy: number;
   dxt: number;
@@ -18,7 +19,6 @@ export type PlayerState = {
 export type GameState = {
   step: GAME_STEP;
   score: [number, number];
-  switchPlayer: boolean; // TODO: solve somehow else
 };
 
 export enum GAME_STEP {
@@ -37,9 +37,7 @@ export enum MESSAGE_EVENTS {
 }
 
 // TODO: probably can be made generic with type for data prop
-export type Message<T = unknown> = {
+export type Message<T = never> = {
   event: MESSAGE_EVENTS;
   data: T;
 };
-
-export type PlayersSide = 'LEFT' | 'RIGHT';

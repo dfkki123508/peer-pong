@@ -1,18 +1,15 @@
 import React from 'react';
+import { gameStateSubject } from '../../services/GameStore';
 import { GameState } from '../../types/types';
+import { useSharedState } from '../../util/UseObservable';
 import MenuWrapper from '../MenuWrapper/MenuWrapper';
 
 type ResultPropsType = {
   open: boolean;
-  gameState: GameState;
-  setGameState: React.Dispatch<React.SetStateAction<GameState>>;
 };
 
-const Result = ({
-  open,
-  gameState,
-  setGameState,
-}: ResultPropsType): JSX.Element => {
+const Result = ({ open }: ResultPropsType): JSX.Element => {
+  const [gameState, setGameState] = useSharedState(gameStateSubject);
   return (
     <MenuWrapper open={open}>
       <h2 id="transition-modal-title">

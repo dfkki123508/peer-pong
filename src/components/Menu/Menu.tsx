@@ -4,21 +4,15 @@ import { useP2PService } from '../../services/P2PService';
 import QRCode from 'qrcode.react';
 import { GameState, GAME_STEP, PlayersSide } from '../../types/types';
 import MenuWrapper from '../MenuWrapper/MenuWrapper';
+import { GameController } from '../../controllers/GameController';
 
 type MenuPropsType = {
   open: boolean;
-  gameState: GameState;
-  setGameState: React.Dispatch<React.SetStateAction<GameState>>;
-  setPlayersSide: React.Dispatch<React.SetStateAction<PlayersSide>>;
 };
 
-const Menu = ({
-  open,
-  gameState,
-  setGameState,
-  setPlayersSide,
-}: MenuPropsType): JSX.Element => {
+const Menu = ({ open }: MenuPropsType): JSX.Element => {
   const p2pService = useP2PService();
+  const gameController = GameController.getInstance();
   const [inputPeerId, setInputPeerId] = React.useState('');
   const [myId, setMyId] = React.useState(p2pService.me?.id || undefined);
 
@@ -32,16 +26,13 @@ const Menu = ({
 
   const onClickConnect = () => {
     if (inputPeerId && inputPeerId != '') {
-      // Connect and subscribe to data
-      p2pService.connect(inputPeerId);
-      setPlayersSide('RIGHT');  // TODO: BETTER SEND VIA MESSAGE TO REMOTE
-      // setGameState({ ...gameState, state: GAME_STATE.READY_TO_PLAY });
+      gameController.connectToRemote(inputPeerId);
     } else {
       alert('Invalid peer id:' + inputPeerId);
     }
   };
 
-  const onClickCopy = (e) => {
+  const onClickCopy = () => {
     if (myId) {
       navigator.clipboard.writeText(myId);
     }

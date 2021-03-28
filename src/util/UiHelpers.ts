@@ -15,3 +15,8 @@ export function launchIntoFullscreen(element) {
     console.error(err);
   }
 }
+
+export function getHashValue(key: string): string | null {
+  const matches = location.hash.match(new RegExp(key + '=([^&]*)'));
+  return matches ? matches[1] : null;
+}

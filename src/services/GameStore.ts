@@ -1,48 +1,22 @@
-import React from 'react';
-import { Subject } from 'rxjs';
+import { BehaviorSubject } from 'rxjs';
+import {
+  getInitialBallState,
+  getInitialGameState,
+  getInitialPlayerState,
+} from '../config/GameConfig';
 
-// TODO: move to types.ts
-type GameStateType = {
-  score: [number, number];
-};
-
-// TODO: make rxjs store and handle all game updates, e.g. move players, handle networking, sync state
-// TODO: consider an extra store for player/s, objects, etc.
-// TODO: consider extra class for controlling operations
-export class GameStore {
-  public state$: Subject<GameStateType>; // Maybe use behaviourSubject as it emits the current value to new subscribers
-  private _stateObject: GameStateType;
-
-  constructor() {
-    this.state$ = new Subject<GameStateType>();
-    this._stateObject = {
-      score: [0, 0],
-    };
+export class UpdateSubject<T> extends BehaviorSubject<T> {
+  update(fn: (oldState: T) => T): void {
+    const newState = fn(this.getValue());
+    this.next(newState);
   }
-
-  getState(): GameStateType {
-    return this._stateObject;
-  }
-
-  moveLocalPlayer() {}
-
-  moveRemotePlayer() {}
-
-  moveBall() {}
-
-  setLocalPlayersSide() {}
-
-  setStep(step: GAME_STATE) {}
-
-  setScore(score: [number, number]) {
-    this._stateObject.score = score;
-  }
-
-  scoreForPlayer(playerIdx: 0 | 1) {}
-
-  resetGame() {}
 }
 
-export const GameStoreInstance = new GameStore();
-export const GameStoreContext = React.createContext(GameStoreInstance);
-export const useGameStore = () => React.useContext(GameStoreContext);
+export const gameStateSubject = new UpdateSubject(getInitialGameState());
+export const localPlayerStateSubject = new UpdateSubject(
+  getInitialPlayerState(0),
+);
+export const remotePlayerStateSubject = new UpdateSubject(
+  getInitialPlayerState(1),
+);
+export const ballStateSubject = new UpdateSubject(getInitialBallState());
