@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { BehaviorSubject, Observable, Subject } from 'rxjs';
+import { BehaviorSubject, Observable } from 'rxjs';
 import { skip } from 'rxjs/operators';
 
 export const useObservable = <T>(observable: Observable<T>): T | undefined => {

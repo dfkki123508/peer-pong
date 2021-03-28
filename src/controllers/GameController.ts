@@ -88,19 +88,13 @@ export class GameController {
 
   gameStateObserver(gameState: GameState): void {
     console.log('New game state!', gameState);
-    if (
-      gameState.step != GAME_STEP.FINISHED &&
-      Math.max(...gameState.score) >= 2 //GameConfig.game.finishScore
-    ) {
-      this.gameState.update((x) => ({ ...x, step: GAME_STEP.FINISHED }));
-    }
     // TODO: Launch fullscreen when switching to ready to play
   }
 
   messageObserver(): Observer<Message> {
     return {
       next: (msg) => this.messageDispatcher.dispatch(msg),
-      complete: this.resetGame,
+      complete: () => this.resetGame(true),
       error: (err) => console.error(err),
     };
   }
@@ -113,33 +107,35 @@ export class GameController {
         data: this.ballState.getValue(),
       });
     }
-    this.resetCountdown();
+    this.resetGame();
     this.gameState.update((oldState) => ({
       ...oldState,
       step: GAME_STEP.PLAYING,
     }));
   }
 
-  resetGame(): void {
+  resetGame(initStep = false): void {
     console.log('Resetting game...');
-    this.gameState.next(getInitialGameState());
-    this.resetRound();
+    this.gameState.update((x) => ({
+      ...x,
+      score: [0, 0],
+      step: initStep ? GAME_STEP.INIT : x.step,
+    }));
+    this.resetRound(initStep);
   }
 
-  resetRound(): void {
-    this.localPlayerState.update((oldState) => ({
-      ...getInitialPlayerState(0),
-      x: oldState.x,
-    }));
-    this.remotePlayerState.update((oldState) => ({
-      ...getInitialPlayerState(1),
-      x: oldState.x,
-    }));
+  resetRound(initX = false): void {
+    this.localPlayerState.update((oldState) => {
+      const state = getInitialPlayerState(0);
+      if (!initX) state.x = oldState.x;
+      return state;
+    });
+    this.remotePlayerState.update((oldState) => {
+      const state = getInitialPlayerState(1);
+      if (!initX) state.x = oldState.x;
+      return state;
+    });
     this.ballState.next(getInitialBallState());
-    this.resetCountdown();
-  }
-
-  resetCountdown(): void {
     this.countdownTimer.start();
   }
 
@@ -187,6 +183,13 @@ export class GameController {
     this.remotePlayerState.update((x) => ({ ...x, ...message.data }));
   }
 
+  finishConditionReached(gameState: GameState): boolean {
+    return (
+      gameState.step != GAME_STEP.FINISHED &&
+      Math.max(...gameState.score) >= GameConfig.game.finishScore
+    );
+  }
+
   tick(
     delta: number | undefined,
     p1: PIXI.Sprite | null,
@@ -221,6 +224,9 @@ export class GameController {
         this.gameState.update((oldGameState: GameState) => {
           const newState = Object.assign({}, oldGameState) as GameState;
           newState.score[scoreIdx]++;
+          if (this.finishConditionReached(newState)) {
+            newState.step = GAME_STEP.FINISHED;
+          }
           return newState;
         });
 
