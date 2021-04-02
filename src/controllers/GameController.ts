@@ -8,6 +8,7 @@ import GameConfig, {
 import {
   ballStateSubject,
   countdownTimer,
+  debugStateSubject,
   gameStateSubject,
   localPlayerStateSubject,
   remotePlayerStateSubject,
@@ -15,6 +16,8 @@ import {
 import MessageDispatcher from '../services/MessageDispatcher';
 import { P2PServiceInstance } from '../services/P2PService';
 import {
+  BallState,
+  DEBUG_COMMANDS,
   GameState,
   GAME_STEP,
   Message,
@@ -29,13 +32,14 @@ export class GameController {
   static numInstances = 0;
 
   private p2pService = P2PServiceInstance;
-  private messageDispatcher: MessageDispatcher;
+  private messageDispatcher = new MessageDispatcher();
 
   private gameState = gameStateSubject;
   private localPlayerState = localPlayerStateSubject;
   private remotePlayerState = remotePlayerStateSubject;
   private ballState = ballStateSubject;
   private countdownTimer = countdownTimer;
+  private debugState = debugStateSubject;
 
   private pause = false;
 
@@ -44,25 +48,9 @@ export class GameController {
     console.log('New game controller instance ', GameController.numInstances);
     console.log('p2pservice:', this.p2pService);
 
-    this.updateRemotePlayer = this.updateRemotePlayer.bind(this);
-    this.gameStateObserver = this.gameStateObserver.bind(this);
-    this.startGame = this.startGame.bind(this);
-    this.resetGame = this.resetGame.bind(this);
+    this.bindFunctions();
 
-    this.messageDispatcher = new MessageDispatcher();
-    this.messageDispatcher.registerCallback(
-      MESSAGE_EVENTS.move_player,
-      this.updateRemotePlayer,
-    );
-    this.messageDispatcher.registerCallback(MESSAGE_EVENTS.start_game, () =>
-      this.startGame(false),
-    );
-
-    const peerId = getHashValue('connectTo');
-
-    if (peerId) {
-      this.p2pService.peer$.subscribe(() => this.connectToRemote(peerId));
-    }
+    this.setupMessageCallbacks();
 
     this.gameState.subscribe(this.gameStateObserver);
 
@@ -77,6 +65,12 @@ export class GameController {
         messageObservable.subscribe(this.messageObserver());
       }
     });
+    
+    // Connect to remote if url hash value is given
+    const peerId = getHashValue('connectTo');
+    if (peerId) {
+      this.p2pService.peer$.subscribe(() => this.connectToRemote(peerId));
+    }
   }
 
   static getInstance(): GameController {
@@ -84,6 +78,35 @@ export class GameController {
       GameController.instance = new GameController();
     }
     return GameController.instance;
+  }
+
+  private bindFunctions() {
+    this.startGame = this.startGame.bind(this);
+    this.resetGame = this.resetGame.bind(this);
+    this.updateRemotePlayer = this.updateRemotePlayer.bind(this);
+    this.gameStateObserver = this.gameStateObserver.bind(this);
+    this.handleBallUpdate = this.handleBallUpdate.bind(this);
+    this.handleDebugCommand = this.handleDebugCommand.bind(this);
+    this.handleKeyDown = this.handleKeyDown.bind(this);
+  }
+
+  private setupMessageCallbacks() {
+    this.messageDispatcher.registerCallback(
+      MESSAGE_EVENTS.move_player,
+      this.updateRemotePlayer,
+    );
+    this.messageDispatcher.registerCallback(
+      MESSAGE_EVENTS.start_game,
+      this.startGame,
+    );
+    this.messageDispatcher.registerCallback(
+      MESSAGE_EVENTS.ball_update,
+      this.handleBallUpdate,
+    );
+    this.messageDispatcher.registerCallback(
+      MESSAGE_EVENTS.debug_command,
+      this.handleDebugCommand,
+    );
   }
 
   gameStateObserver(gameState: GameState): void {
@@ -99,15 +122,18 @@ export class GameController {
     };
   }
 
-  startGame(sendToRemote = true): void {
-    console.log('Starting game');
-    if (sendToRemote) {
+  startGame(message?: Message<BallState>): void {
+    console.log('Starting game', message);
+    this.resetGame();
+
+    if (!message) {
       this.p2pService.sendMessage({
         event: MESSAGE_EVENTS.start_game,
         data: this.ballState.getValue(),
       });
+    } else {
+      this.ballState.next(message.data);
     }
-    this.resetGame();
     this.gameState.update((oldState) => ({
       ...oldState,
       step: GAME_STEP.PLAYING,
@@ -163,7 +189,7 @@ export class GameController {
       const newState = {
         ...oldState,
         y: oldState.y + dy,
-        sy: (GameConfig.player.moveSpeed * GameConfig.player.moveAcc) / dt,
+        sy: GameConfig.player.moveSpeed + GameConfig.player.moveAcc / dt,
         dyt: Date.now(),
       };
       // send to other player
@@ -183,6 +209,40 @@ export class GameController {
     this.remotePlayerState.update((x) => ({ ...x, ...message.data }));
   }
 
+  handleBallUpdate(message: Message<BallState>): void {
+    console.log('Updating ball!', message.data);
+    console.log('Current:', this.ballState.getValue());
+    this.ballState.next(message.data);
+  }
+
+  handleDebugCommand(message: Message): void {
+    console.log('Received debug comm', message);
+    switch (message.data) {
+      case DEBUG_COMMANDS.toggle_freeze:
+        this.debugState.update((x) => ({ freeze: !x.freeze }));
+        break;
+      default:
+        break;
+    }
+  }
+
+  handleKeyDown(event: KeyboardEvent): void {
+    if (!this.debugState.getValue().freeze) {
+      if (event.key === 'ArrowUp') {
+        this.moveLocalPlayer('UP');
+      } else if (event.key === 'ArrowDown') {
+        this.moveLocalPlayer('DOWN');
+      }
+    }
+    if (GameConfig.debug.on && event.key === ' ') {
+      this.p2pService.sendMessage({
+        event: MESSAGE_EVENTS.debug_command,
+        data: DEBUG_COMMANDS.toggle_freeze,
+      });
+      this.debugState.update((x) => ({ freeze: !x.freeze }));
+    }
+  }
+
   finishConditionReached(gameState: GameState): boolean {
     return (
       gameState.step != GAME_STEP.FINISHED &&
@@ -192,8 +252,8 @@ export class GameController {
 
   tick(
     delta: number | undefined,
-    p1: PIXI.Sprite | null,
-    p2: PIXI.Sprite | null,
+    localPlayer: PIXI.Sprite | null,
+    remotePlayer: PIXI.Sprite | null,
     ball: PIXI.Sprite | null,
     border: PIXI.Graphics | null,
     countdown: number | undefined,
@@ -203,16 +263,31 @@ export class GameController {
       countdown != null &&
       countdown <= 0 &&
       delta &&
-      p1 &&
-      p2 &&
+      localPlayer &&
+      remotePlayer &&
       ball &&
       border &&
-      !this.pause
+      !this.pause &&
+      !this.debugState.getValue().freeze
     ) {
       if (checkIfObjectInCanvas(ball)) {
-        this.ballState.update((prevState) =>
-          ballUpdate(prevState, delta, p1, p2, ball, border),
-        );
+        this.ballState.update((prevState) => {
+          const [newState, localPlayerCollision] = ballUpdate(
+            prevState,
+            delta,
+            localPlayer,
+            remotePlayer,
+            ball,
+            border,
+          );
+          if (localPlayerCollision) {
+            this.p2pService.sendMessage({
+              event: MESSAGE_EVENTS.ball_update,
+              data: newState,
+            });
+          }
+          return newState;
+        });
       } else {
         this.pause = true;
 

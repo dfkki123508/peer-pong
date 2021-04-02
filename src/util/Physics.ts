@@ -1,6 +1,3 @@
-// Test For Hit
-
-import { Console } from 'node:console';
 import { Point } from 'pixi.js';
 import GameConfig from '../config/GameConfig';
 import { BallState } from '../types/types';
@@ -28,7 +25,7 @@ export function reflectWithin(
   inner: PIXI.Container,
   outer: PIXI.Container,
   sides: Array<SIDES>,
-  innerMovingVector: PIXI.Point,
+  acceleration: PIXI.Point,
 ): PIXI.Point {
   const bounds1 = inner.getBounds();
   const bounds2 = outer.getBounds();
@@ -36,35 +33,35 @@ export function reflectWithin(
   for (const side of sides) {
     switch (side) {
       case 'top':
-        if (bounds1.y < bounds2.y && innerMovingVector.y < 0) {
-          return reflectVector(new Point(0, 1), innerMovingVector);
+        if (bounds1.y < bounds2.y && acceleration.y < 0) {
+          return reflectVector(new Point(0, 1), acceleration);
         }
         continue;
       case 'bottom':
         if (
           bounds1.y + bounds1.height > bounds2.y + bounds2.height &&
-          innerMovingVector.y > 0
+          acceleration.y > 0
         ) {
-          return reflectVector(new Point(0, 1), innerMovingVector);
+          return reflectVector(new Point(0, 1), acceleration);
         }
         continue;
       case 'left':
-        if (bounds1.x < bounds2.x && innerMovingVector.x < 0) {
-          return reflectVector(new Point(1, 0), innerMovingVector);
+        if (bounds1.x < bounds2.x && acceleration.x < 0) {
+          return reflectVector(new Point(1, 0), acceleration);
         }
         continue;
       case 'right':
         if (
           bounds1.x + bounds1.width > bounds2.x + bounds2.width &&
-          innerMovingVector.x > 0
+          acceleration.x > 0
         ) {
-          return reflectVector(new Point(1, 0), innerMovingVector);
+          return reflectVector(new Point(1, 0), acceleration);
         }
         continue;
     }
   }
 
-  return innerMovingVector;
+  return acceleration;
 }
 
 export function rand(min: number, max: number): number {
@@ -73,7 +70,7 @@ export function rand(min: number, max: number): number {
 
 const collissionResponse = (vec: PIXI.Point, angularInfcluence = 0) => {
   let newVec = reflectVector(new Point(1, 0), vec); // reflect by normal
-  newVec = multScalar(newVec, 1.5); // Speed up
+  newVec = multScalar(newVec, 1.1); // Speed up
   const alpha = (angularInfcluence * Math.PI) / 3;
   return rotate(newVec, alpha);
 };
@@ -106,8 +103,9 @@ export function ballUpdate(
   p2: PIXI.Sprite,
   ball: PIXI.Sprite,
   border: PIXI.Graphics,
-): BallState {
+): [BallState, boolean] {
   const newState = Object.assign({}, prevBallState);
+  let localPlayerCollision = false;
 
   if (testForAABB(ball, p1) && checkIfBallMovingTowardsPlayer(newState, p1)) {
     // console.log('Collision');
@@ -116,6 +114,7 @@ export function ballUpdate(
       newState.acceleration,
       angularInfcluence,
     );
+    localPlayerCollision = true;
   } else if (
     testForAABB(ball, p2) &&
     checkIfBallMovingTowardsPlayer(newState, p2)
@@ -137,5 +136,5 @@ export function ballUpdate(
   newState.x += acceleration.x * delta;
   newState.y += acceleration.y * delta;
   newState.acceleration = acceleration;
-  return newState;
+  return [newState, localPlayerCollision];
 }

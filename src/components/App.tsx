@@ -19,7 +19,7 @@ import { useSharedState } from '../util/UseObservable';
 import { gameStateSubject } from '../services/GameStore';
 
 const App = () => {
-  const [gameState, setGameState] = useSharedState(gameStateSubject);
+  const [gameState] = useSharedState(gameStateSubject);
 
   return (
     <div className="app-container">

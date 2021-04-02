@@ -2,11 +2,8 @@ import * as React from 'react';
 import { Container, Sprite, Text, useTick } from '@inlet/react-pixi';
 import { TextStyle, Texture } from 'pixi.js';
 import GameConfig from '../../config/GameConfig';
-import { useP2PService } from '../../services/P2PService';
 import Border from './Border/Border';
-import { GAME_STEP } from '../../types/types';
 import Countdown from './Countdown/Countdown';
-import Background from './Background/Background';
 import { GameController } from '../../controllers/GameController';
 import { useObservable, useSharedState } from '../../util/UseObservable';
 import {
@@ -21,14 +18,12 @@ import { useTouchEvents } from '../../util/UseTouchEvents';
 const Game = () => {
   const gameController = GameController.getInstance();
 
-  const [gameState, setGameState] = useSharedState(gameStateSubject);
+  const [gameState] = useSharedState(gameStateSubject);
   const [localPlayerState, setLocalPlayerState] = useSharedState(
     localPlayerStateSubject,
   );
-  const [remotePlayerState, setRemotePlayerState] = useSharedState(
-    remotePlayerStateSubject,
-  );
-  const [ballState, setBallState] = useSharedState(ballStateSubject);
+  const [remotePlayerState] = useSharedState(remotePlayerStateSubject);
+  const [ballState] = useSharedState(ballStateSubject);
 
   const localPlayerRef = React.createRef<PIXI.Sprite>();
   const remotePlayerRef = React.createRef<PIXI.Sprite>();
@@ -45,19 +40,15 @@ const Game = () => {
 
   // Register keydown listener
   React.useEffect(() => {
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === 'ArrowUp') {
-        gameController.moveLocalPlayer('UP');
-      } else if (event.key === 'ArrowDown') {
-        gameController.moveLocalPlayer('DOWN');
-      }
-    }
-
-    window.addEventListener('keydown', handleKeyDown, false);
+    window.addEventListener('keydown', gameController.handleKeyDown, false);
     return () => {
-      window.removeEventListener('keydown', handleKeyDown, false);
+      window.removeEventListener(
+        'keydown',
+        gameController.handleKeyDown,
+        false,
+      );
     };
-  }, [gameController]);
+  }, []);
 
   useTick((delta) =>
     gameController.tick(

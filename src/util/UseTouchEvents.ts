@@ -6,7 +6,7 @@ export function useTouchEvents<T>(
   state: T,
   setState: React.Dispatch<React.SetStateAction<T>> | ((state: T) => void),
   playerRef: React.RefObject<PIXI.Sprite>,
-  movePlayer: () => void,
+  movePlayer?: () => void,
 ): {
   touchstart: (event: PIXI.InteractionEvent) => void;
   touchmove: () => void;

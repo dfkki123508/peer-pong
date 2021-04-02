@@ -4,8 +4,9 @@ import { rand } from '../util/Physics';
 
 const GameConfig = {
   player: {
-    moveSpeed: 10.0,
-    moveAcc: 60.0,
+    moveSpeed: 35.0,
+    moveAcc: 70.0,
+    maxMoveSpeed: 100,
   },
   ball: {
     width: 20,
@@ -20,6 +21,9 @@ const GameConfig = {
   background: {
     numStars: 100,
   },
+  debug: {
+    on: true,
+  },
 };
 
 export const getInitialBallState = (): BallState => ({
@@ -27,8 +31,8 @@ export const getInitialBallState = (): BallState => ({
   y: GameConfig.screen.height / 2,
   sy: GameConfig.player.moveSpeed,
   acceleration: new Point(
-    -3, // rand(2.0, 5.0) * (Math.random() < 0.5 ? -1 : 1), // TODO: needs to be synced with peer!!!
-    0, // rand(-2.0, 2.0),
+    rand(2.0, 5.0) * (Math.random() < 0.5 ? -1 : 1),
+    rand(-2.0, 2.0),
   ),
 });
 

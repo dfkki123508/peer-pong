@@ -34,6 +34,12 @@ export enum MESSAGE_EVENTS {
   'move_player',
   'ping',
   'pong',
+  'debug_command',
+  'ball_update',
+}
+
+export enum DEBUG_COMMANDS {
+  'toggle_freeze',
 }
 
 // TODO: probably can be made generic with type for data prop

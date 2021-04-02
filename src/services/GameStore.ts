@@ -12,7 +12,7 @@ export class UpdateSubject<T> extends BehaviorSubject<T> {
     this.next(newState);
   }
 }
-
+export const debugStateSubject = new UpdateSubject({ freeze: false });
 export const gameStateSubject = new UpdateSubject(getInitialGameState());
 export const localPlayerStateSubject = new UpdateSubject(
   getInitialPlayerState(0),
