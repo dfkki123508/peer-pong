@@ -6,12 +6,12 @@ import GameConfig, {
   getInitialPlayerState,
 } from '../config/GameConfig';
 import {
-  ballStateSubject,
+  ballState$,
   countdownTimer,
-  debugStateSubject,
-  gameStateSubject,
-  localPlayerStateSubject,
-  remotePlayerStateSubject,
+  debugState$,
+  gameState$,
+  localPlayerState$,
+  remotePlayerState$,
 } from '../services/GameStore';
 import MessageDispatcher from '../services/MessageDispatcher';
 import { P2PServiceInstance } from '../services/P2PService';
@@ -34,12 +34,12 @@ export class GameController {
   private p2pService = P2PServiceInstance;
   private messageDispatcher = new MessageDispatcher();
 
-  private gameState = gameStateSubject;
-  private localPlayerState = localPlayerStateSubject;
-  private remotePlayerState = remotePlayerStateSubject;
-  private ballState = ballStateSubject;
+  private gameState$ = gameState$;
+  private localPlayerState$ = localPlayerState$;
+  private remotePlayerState$ = remotePlayerState$;
+  private ballState$ = ballState$;
   private countdownTimer = countdownTimer;
-  private debugState = debugStateSubject;
+  private debugState$ = debugState$;
 
   private pause = false;
 
@@ -52,20 +52,20 @@ export class GameController {
 
     this.setupMessageCallbacks();
 
-    this.gameState.subscribe(this.gameStateObserver);
+    this.gameState$.subscribe(this.gameStateObserver);
 
     // On connection, switch to ready to play
     P2PServiceInstance.conn$.subscribe((messageObservable) => {
       if (messageObservable) {
         console.log('New connection! Setting gamestate to ready-to-play...');
-        gameStateSubject.update((x) => ({
+        gameState$.update((x) => ({
           ...x,
           step: GAME_STEP.READY_TO_PLAY,
         }));
         messageObservable.subscribe(this.messageObserver());
       }
     });
-    
+
     // Connect to remote if url hash value is given
     const peerId = getHashValue('connectTo');
     if (peerId) {
@@ -129,12 +129,12 @@ export class GameController {
     if (!message) {
       this.p2pService.sendMessage({
         event: MESSAGE_EVENTS.start_game,
-        data: this.ballState.getValue(),
+        data: this.ballState$.getValue(),
       });
     } else {
-      this.ballState.next(message.data);
+      this.ballState$.next(message.data);
     }
-    this.gameState.update((oldState) => ({
+    this.gameState$.update((oldState) => ({
       ...oldState,
       step: GAME_STEP.PLAYING,
     }));
@@ -142,7 +142,7 @@ export class GameController {
 
   resetGame(initStep = false): void {
     console.log('Resetting game...');
-    this.gameState.update((x) => ({
+    this.gameState$.update((x) => ({
       ...x,
       score: [0, 0],
       step: initStep ? GAME_STEP.INIT : x.step,
@@ -151,30 +151,30 @@ export class GameController {
   }
 
   resetRound(initX = false): void {
-    this.localPlayerState.update((oldState) => {
+    this.localPlayerState$.update((oldState) => {
       const state = getInitialPlayerState(0);
       if (!initX) state.x = oldState.x;
       return state;
     });
-    this.remotePlayerState.update((oldState) => {
+    this.remotePlayerState$.update((oldState) => {
       const state = getInitialPlayerState(1);
       if (!initX) state.x = oldState.x;
       return state;
     });
-    this.ballState.next(getInitialBallState());
+    this.ballState$.next(getInitialBallState());
     this.countdownTimer.start();
   }
 
   swapPlayersSides(): void {
-    let localX = this.localPlayerState.getValue().x;
-    let remoteX = this.remotePlayerState.getValue().x;
+    let localX = this.localPlayerState$.getValue().x;
+    let remoteX = this.remotePlayerState$.getValue().x;
     const copyX = remoteX;
 
     remoteX = localX;
     localX = copyX;
 
-    this.localPlayerState.update((oldState) => ({ ...oldState, x: localX }));
-    this.remotePlayerState.update((oldState) => ({ ...oldState, x: remoteX }));
+    this.localPlayerState$.update((oldState) => ({ ...oldState, x: localX }));
+    this.remotePlayerState$.update((oldState) => ({ ...oldState, x: remoteX }));
   }
 
   connectToRemote(inputPeerId: string): void {
@@ -183,7 +183,7 @@ export class GameController {
   }
 
   moveLocalPlayer(dir: 'UP' | 'DOWN'): void {
-    this.localPlayerState.update((oldState) => {
+    this.localPlayerState$.update((oldState) => {
       const dt = Date.now() - oldState.dyt;
       const dy = dir === 'UP' ? -oldState.sy : oldState.sy;
       const newState = {
@@ -206,20 +206,20 @@ export class GameController {
   }
 
   updateRemotePlayer(message: Message<{ y: number }>): void {
-    this.remotePlayerState.update((x) => ({ ...x, ...message.data }));
+    this.remotePlayerState$.update((x) => ({ ...x, ...message.data }));
   }
 
   handleBallUpdate(message: Message<BallState>): void {
     console.log('Updating ball!', message.data);
-    console.log('Current:', this.ballState.getValue());
-    this.ballState.next(message.data);
+    console.log('Current:', this.ballState$.getValue());
+    this.ballState$.next(message.data);
   }
 
   handleDebugCommand(message: Message): void {
     console.log('Received debug comm', message);
     switch (message.data) {
       case DEBUG_COMMANDS.toggle_freeze:
-        this.debugState.update((x) => ({ freeze: !x.freeze }));
+        this.debugState$.update((x) => ({ freeze: !x.freeze }));
         break;
       default:
         break;
@@ -227,7 +227,7 @@ export class GameController {
   }
 
   handleKeyDown(event: KeyboardEvent): void {
-    if (!this.debugState.getValue().freeze) {
+    if (!this.debugState$.getValue().freeze) {
       if (event.key === 'ArrowUp') {
         this.moveLocalPlayer('UP');
       } else if (event.key === 'ArrowDown') {
@@ -239,7 +239,7 @@ export class GameController {
         event: MESSAGE_EVENTS.debug_command,
         data: DEBUG_COMMANDS.toggle_freeze,
       });
-      this.debugState.update((x) => ({ freeze: !x.freeze }));
+      this.debugState$.update((x) => ({ freeze: !x.freeze }));
     }
   }
 
@@ -259,7 +259,7 @@ export class GameController {
     countdown: number | undefined,
   ): void {
     if (
-      this.gameState.getValue().step === GAME_STEP.PLAYING &&
+      this.gameState$.getValue().step === GAME_STEP.PLAYING &&
       countdown != null &&
       countdown <= 0 &&
       delta &&
@@ -268,10 +268,10 @@ export class GameController {
       ball &&
       border &&
       !this.pause &&
-      !this.debugState.getValue().freeze
+      !this.debugState$.getValue().freeze
     ) {
       if (checkIfObjectInCanvas(ball)) {
-        this.ballState.update((prevState) => {
+        this.ballState$.update((prevState) => {
           const [newState, localPlayerCollision] = ballUpdate(
             prevState,
             delta,
@@ -296,7 +296,7 @@ export class GameController {
           GameConfig.screen.width - GameConfig.screen.padding
         );
         console.log('SCORE!');
-        this.gameState.update((oldGameState: GameState) => {
+        this.gameState$.update((oldGameState: GameState) => {
           const newState = Object.assign({}, oldGameState) as GameState;
           newState.score[scoreIdx]++;
           if (this.finishConditionReached(newState)) {

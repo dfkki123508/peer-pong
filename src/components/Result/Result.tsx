@@ -1,7 +1,6 @@
 import React from 'react';
 import { GameController } from '../../controllers/GameController';
-import { gameStateSubject } from '../../services/GameStore';
-import { GameState } from '../../types/types';
+import { gameState$ } from '../../services/GameStore';
 import { useSharedState } from '../../util/UseObservable';
 import MenuWrapper from '../MenuWrapper/MenuWrapper';
 
@@ -11,7 +10,7 @@ type ResultPropsType = {
 
 const Result = ({ open }: ResultPropsType): JSX.Element => {
   const gameController = GameController.getInstance();
-  const [gameState, setGameState] = useSharedState(gameStateSubject);
+  const [gameState] = useSharedState(gameState$);
 
   return (
     <MenuWrapper open={open}>

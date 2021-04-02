@@ -12,14 +12,9 @@ export class UpdateSubject<T> extends BehaviorSubject<T> {
     this.next(newState);
   }
 }
-export const debugStateSubject = new UpdateSubject({ freeze: false });
-export const gameStateSubject = new UpdateSubject(getInitialGameState());
-export const localPlayerStateSubject = new UpdateSubject(
-  getInitialPlayerState(0),
-);
-export const remotePlayerStateSubject = new UpdateSubject(
-  getInitialPlayerState(1),
-);
-export const ballStateSubject = new UpdateSubject(getInitialBallState());
-
+export const debugState$ = new UpdateSubject({ freeze: false });
+export const gameState$ = new UpdateSubject(getInitialGameState());
+export const ballState$ = new UpdateSubject(getInitialBallState());
+export const localPlayerState$ = new UpdateSubject(getInitialPlayerState(0));
+export const remotePlayerState$ = new UpdateSubject(getInitialPlayerState(1));
 export const countdownTimer = new Timer(GameConfig.game.countdownLength);

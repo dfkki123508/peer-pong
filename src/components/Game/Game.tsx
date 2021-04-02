@@ -7,23 +7,23 @@ import Countdown from './Countdown/Countdown';
 import { GameController } from '../../controllers/GameController';
 import { useObservable, useSharedState } from '../../util/UseObservable';
 import {
-  ballStateSubject,
+  ballState$,
   countdownTimer,
-  gameStateSubject,
-  localPlayerStateSubject,
-  remotePlayerStateSubject,
+  gameState$,
+  localPlayerState$,
+  remotePlayerState$,
 } from '../../services/GameStore';
 import { useTouchEvents } from '../../util/UseTouchEvents';
 
 const Game = () => {
   const gameController = GameController.getInstance();
 
-  const [gameState] = useSharedState(gameStateSubject);
+  const [gameState] = useSharedState(gameState$);
   const [localPlayerState, setLocalPlayerState] = useSharedState(
-    localPlayerStateSubject,
+    localPlayerState$,
   );
-  const [remotePlayerState] = useSharedState(remotePlayerStateSubject);
-  const [ballState] = useSharedState(ballStateSubject);
+  const [remotePlayerState] = useSharedState(remotePlayerState$);
+  const [ballState] = useSharedState(ballState$);
 
   const localPlayerRef = React.createRef<PIXI.Sprite>();
   const remotePlayerRef = React.createRef<PIXI.Sprite>();

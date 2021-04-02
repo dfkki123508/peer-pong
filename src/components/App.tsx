@@ -2,24 +2,18 @@ import * as React from 'react';
 import { hot } from 'react-hot-loader';
 import './App.scss';
 import { Stage } from '@inlet/react-pixi';
-import GameConfig, {
-  getInitialBallState,
-  getInitialGameState,
-  getInitialPlayerState,
-} from '../config/GameConfig';
+import GameConfig from '../config/GameConfig';
 import Game from './Game/Game';
-import { useP2PService } from '../services/P2PService';
 import Menu from './Menu/Menu';
 import Result from './Result/Result';
 import { GAME_STEP } from '../types/types';
 import ReadyToPlay from './ReadyToPlay/ReadyToPlay';
 import Debug from './Debug/Debug';
-import { GameController } from '../controllers/GameController';
 import { useSharedState } from '../util/UseObservable';
-import { gameStateSubject } from '../services/GameStore';
+import { gameState$ } from '../services/GameStore';
 
 const App = () => {
-  const [gameState] = useSharedState(gameStateSubject);
+  const [gameState] = useSharedState(gameState$);
 
   return (
     <div className="app-container">
