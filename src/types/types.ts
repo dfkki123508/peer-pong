@@ -36,6 +36,8 @@ export enum MESSAGE_EVENTS {
   'pong',
   'debug_command',
   'ball_update',
+  'start_round',
+  'reset_round',
 }
 
 export enum DEBUG_COMMANDS {

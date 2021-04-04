@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Container, Sprite, Text, useTick } from '@inlet/react-pixi';
+import { Container, Sprite, Text, useApp, useTick } from '@inlet/react-pixi';
 import { TextStyle, Texture } from 'pixi.js';
 import GameConfig from '../../config/GameConfig';
 import Border from './Border/Border';
@@ -14,8 +14,10 @@ import {
   remotePlayerState$,
 } from '../../services/GameStore';
 import { useTouchEvents } from '../../util/UseTouchEvents';
+import Debug from '../Debug/Debug';
 
 const Game = () => {
+  const pixiApp = useApp();
   const gameController = GameController.getInstance();
 
   const [gameState] = useSharedState(gameState$);

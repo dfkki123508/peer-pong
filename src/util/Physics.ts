@@ -1,7 +1,13 @@
 import { Point } from 'pixi.js';
 import GameConfig from '../config/GameConfig';
 import { BallState } from '../types/types';
-import { multScalar, reflectVector, rotate } from './VectorOperations';
+import {
+  divScalar,
+  multScalar,
+  norm,
+  reflectVector,
+  rotate,
+} from './VectorOperations';
 
 // A basic AABB check between two different squares
 export function testForAABB(
@@ -68,7 +74,7 @@ export function rand(min: number, max: number): number {
   return Math.random() * (max - min) + min;
 }
 
-const collissionResponse = (vec: PIXI.Point, angularInfcluence = 0) => {
+const collisionResponse = (vec: PIXI.Point, angularInfcluence = 0) => {
   let newVec = reflectVector(new Point(1, 0), vec); // reflect by normal
   newVec = multScalar(newVec, 1.1); // Speed up
   const alpha = (angularInfcluence * Math.PI) / 3;
@@ -106,25 +112,36 @@ export function ballUpdate(
 ): [BallState, boolean] {
   const newState = Object.assign({}, prevBallState);
   let localPlayerCollision = false;
+  let collision = false;
 
   if (testForAABB(ball, p1) && checkIfBallMovingTowardsPlayer(newState, p1)) {
     // console.log('Collision');
     const angularInfcluence = (ball.y - p1.y) / (p1.height / 2); // 1...-1 depending on ball impact at the player
-    newState.acceleration = collissionResponse(
+    newState.acceleration = collisionResponse(
       newState.acceleration,
       angularInfcluence,
     );
-    localPlayerCollision = true;
+    localPlayerCollision = collision = true;
   } else if (
     testForAABB(ball, p2) &&
     checkIfBallMovingTowardsPlayer(newState, p2)
   ) {
     // console.log('Collision');
     const angularInfcluence = (ball.y - p2.y) / (p2.height / 2); // 1...-1 depending on ball impact at the player
-    newState.acceleration = collissionResponse(
+    newState.acceleration = collisionResponse(
       newState.acceleration,
       angularInfcluence,
     );
+    collision = true;
+  }
+
+  // Scale to previous acceleration if it got smaller during collisionResponse calculation
+  if (collision) {
+    const newAcc = norm(newState.acceleration);
+    const prevAcc = norm(prevBallState.acceleration);
+    if (newAcc < prevAcc) {
+      multScalar(divScalar(newState.acceleration, newAcc), prevAcc);
+    }
   }
 
   const acceleration = reflectWithin(

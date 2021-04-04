@@ -60,7 +60,7 @@ const Menu = ({ open }: MenuPropsType): JSX.Element => {
         </div>
         <div className="qrcode">
           {myId ? (
-            <QRCode value={`http://192.168.1.6:8080/#connectTo=${myId}`} />
+            <QRCode value={`http://10.0.0.7:8080/#connectTo=${myId}`} />
           ) : (
             ''
           )}

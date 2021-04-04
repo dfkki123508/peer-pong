@@ -10,10 +10,24 @@ import { GAME_STEP } from '../types/types';
 import ReadyToPlay from './ReadyToPlay/ReadyToPlay';
 import Debug from './Debug/Debug';
 import { useSharedState } from '../util/UseObservable';
-import { gameState$ } from '../services/GameStore';
+import { gameState$, fps$ } from '../services/GameStore';
+import * as PIXI from 'pixi.js';
+
+const defaultRender = PIXI.Renderer.prototype.render;
+
+let last = 0;
+
+// Tap into pixi renderer to calculate fps
+PIXI.Renderer.prototype.render = function render(...args): void {
+  const current = performance.now();
+  fps$.next(1000 / (current - last));
+  last = current;
+  defaultRender.apply(this, args);
+};
 
 const App = () => {
   const [gameState] = useSharedState(gameState$);
+  const stageRef = React.createRef<Stage & { app: PIXI.Application }>();
 
   return (
     <div className="app-container">
@@ -25,6 +39,7 @@ const App = () => {
           options={{
             backgroundColor: 0x0,
           }}
+          ref={stageRef}
         >
           <Game />
         </Stage>
@@ -38,7 +53,7 @@ const App = () => {
       {gameState.step === GAME_STEP.FINISHED && (
         <Result open={gameState.step === GAME_STEP.FINISHED} />
       )}
-      <Debug />
+      <Debug pixiAppRef={stageRef} />
     </div>
   );
 };

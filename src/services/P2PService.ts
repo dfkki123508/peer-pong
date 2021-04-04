@@ -92,8 +92,13 @@ export class P2PService {
     if (!(typeof msg === 'string' || msg instanceof String)) {
       msg = JSON.stringify(msg);
     }
-
-    conn.send(msg);
+    
+    try {
+      conn.send(msg);
+    } catch (err) {
+      console.error(err);
+      console.log(this.me);
+    }
   }
 }
 

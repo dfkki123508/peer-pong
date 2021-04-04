@@ -8,6 +8,9 @@ type MenuWrapperProps = {
   children: React.ReactNode;
 };
 
+// TODO: write on dialog component, such that:
+// * clicking on background is still possible
+// * looks more game like
 const MenuWrapper = ({
   open,
   handleClose,

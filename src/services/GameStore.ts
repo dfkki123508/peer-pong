@@ -1,4 +1,4 @@
-import { BehaviorSubject } from 'rxjs';
+import { BehaviorSubject, Subject } from 'rxjs';
 import GameConfig, {
   getInitialBallState,
   getInitialGameState,
@@ -18,3 +18,4 @@ export const ballState$ = new UpdateSubject(getInitialBallState());
 export const localPlayerState$ = new UpdateSubject(getInitialPlayerState(0));
 export const remotePlayerState$ = new UpdateSubject(getInitialPlayerState(1));
 export const countdownTimer = new Timer(GameConfig.game.countdownLength);
+export const fps$ = new UpdateSubject<number>(0);

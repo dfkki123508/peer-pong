@@ -41,6 +41,7 @@ export class GameController {
   private countdownTimer = countdownTimer;
   private debugState$ = debugState$;
 
+  private masterPeer = false;
   private pause = false;
 
   private constructor() {
@@ -55,7 +56,7 @@ export class GameController {
     this.gameState$.subscribe(this.gameStateObserver);
 
     // On connection, switch to ready to play
-    P2PServiceInstance.conn$.subscribe((messageObservable) => {
+    this.p2pService.conn$.subscribe((messageObservable) => {
       if (messageObservable) {
         console.log('New connection! Setting gamestate to ready-to-play...');
         gameState$.update((x) => ({
@@ -83,11 +84,14 @@ export class GameController {
   private bindFunctions() {
     this.startGame = this.startGame.bind(this);
     this.resetGame = this.resetGame.bind(this);
+    this.startRound = this.startRound.bind(this);
+    this.resetRound = this.resetRound.bind(this);
     this.updateRemotePlayer = this.updateRemotePlayer.bind(this);
     this.gameStateObserver = this.gameStateObserver.bind(this);
     this.handleBallUpdate = this.handleBallUpdate.bind(this);
     this.handleDebugCommand = this.handleDebugCommand.bind(this);
     this.handleKeyDown = this.handleKeyDown.bind(this);
+    this.onDisconnect = this.onDisconnect.bind(this);
   }
 
   private setupMessageCallbacks() {
@@ -98,6 +102,13 @@ export class GameController {
     this.messageDispatcher.registerCallback(
       MESSAGE_EVENTS.start_game,
       this.startGame,
+    );
+    this.messageDispatcher.registerCallback(
+      MESSAGE_EVENTS.start_round,
+      this.startRound,
+    );
+    this.messageDispatcher.registerCallback(MESSAGE_EVENTS.reset_round, () =>
+      this.resetRound(),
     );
     this.messageDispatcher.registerCallback(
       MESSAGE_EVENTS.ball_update,
@@ -117,15 +128,22 @@ export class GameController {
   messageObserver(): Observer<Message> {
     return {
       next: (msg) => this.messageDispatcher.dispatch(msg),
-      complete: () => this.resetGame(true),
+      complete: () => this.onDisconnect(),
       error: (err) => console.error(err),
     };
   }
 
+  onDisconnect(): void {
+    this.masterPeer = false;
+    this.resetGame(true);
+  }
+
+  // TODO: make wrapper/decorator/pattern whatever to handle functions executed on both peers
   startGame(message?: Message<BallState>): void {
     console.log('Starting game', message);
     this.resetGame();
 
+    // Either send or process data
     if (!message) {
       this.p2pService.sendMessage({
         event: MESSAGE_EVENTS.start_game,
@@ -150,19 +168,38 @@ export class GameController {
     this.resetRound(initStep);
   }
 
-  resetRound(initX = false): void {
+  startRound(message?: Message<BallState>): void {
+    console.log('Starting round', message);
+
+    // Either send or process data
+    if (!message) {
+      this.p2pService.sendMessage({
+        event: MESSAGE_EVENTS.start_round,
+        data: this.ballState$.getValue(),
+      });
+    } else {
+      this.ballState$.next(message.data);
+    }
+    this.countdownTimer.start();
+  }
+
+  resetRound(initPlayersSide = false, send = false): void {
     this.localPlayerState$.update((oldState) => {
       const state = getInitialPlayerState(0);
-      if (!initX) state.x = oldState.x;
+      if (!initPlayersSide) state.x = oldState.x;
       return state;
     });
     this.remotePlayerState$.update((oldState) => {
       const state = getInitialPlayerState(1);
-      if (!initX) state.x = oldState.x;
+      if (!initPlayersSide) state.x = oldState.x;
       return state;
     });
+
     this.ballState$.next(getInitialBallState());
-    this.countdownTimer.start();
+
+    if (send) {
+      this.p2pService.sendMessage({ event: MESSAGE_EVENTS.reset_round });
+    }
   }
 
   swapPlayersSides(): void {
@@ -180,6 +217,7 @@ export class GameController {
   connectToRemote(inputPeerId: string): void {
     this.p2pService.connect(inputPeerId); // TODO: check that peer me id is ready before
     this.swapPlayersSides();
+    this.masterPeer = true; // The one who connects is the master peer
   }
 
   moveLocalPlayer(dir: 'UP' | 'DOWN'): void {
@@ -210,8 +248,6 @@ export class GameController {
   }
 
   handleBallUpdate(message: Message<BallState>): void {
-    console.log('Updating ball!', message.data);
-    console.log('Current:', this.ballState$.getValue());
     this.ballState$.next(message.data);
   }
 
@@ -307,6 +343,8 @@ export class GameController {
 
         setTimeout(() => {
           this.resetRound();
+          // Only one player needs to reset ball and send update to other
+          if (this.masterPeer) this.startRound();
           this.pause = false;
         }, 2000);
       }
