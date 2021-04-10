@@ -12,6 +12,7 @@ const GameConfig = {
     width: 20,
     height: 20,
     maxAcc: 20,
+    speedUp: 1.1,
   },
   game: {
     countdownLength: 3.0, // seconds

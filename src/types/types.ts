@@ -1,5 +1,6 @@
 import { Point } from 'pixi.js';
 
+// TODO: make x,y PIXI.Point as well
 export type BallState = {
   x: number;
   y: number;

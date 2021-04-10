@@ -2,6 +2,7 @@ import { Point } from 'pixi.js';
 import GameConfig from '../config/GameConfig';
 import { BallState } from '../types/types';
 import {
+  addVector,
   divScalar,
   multScalar,
   norm,
@@ -76,7 +77,7 @@ export function rand(min: number, max: number): number {
 
 const collisionResponse = (vec: PIXI.Point, angularInfcluence = 0) => {
   let newVec = reflectVector(new Point(1, 0), vec); // reflect by normal
-  newVec = multScalar(newVec, 1.1); // Speed up
+  newVec = multScalar(newVec, GameConfig.ball.speedUp); // Speed up
   const alpha = (angularInfcluence * Math.PI) / 3;
   return rotate(newVec, alpha);
 };
@@ -109,7 +110,7 @@ export function ballUpdate(
   p2: PIXI.Sprite,
   ball: PIXI.Sprite,
   border: PIXI.Graphics,
-): [BallState, boolean] {
+): [BallState, boolean, boolean] {
   const newState = Object.assign({}, prevBallState);
   let localPlayerCollision = false;
   let collision = false;
@@ -153,5 +154,118 @@ export function ballUpdate(
   newState.x += acceleration.x * delta;
   newState.y += acceleration.y * delta;
   newState.acceleration = acceleration;
-  return [newState, localPlayerCollision];
+  return [newState, collision, localPlayerCollision];
+}
+
+export function lineIntersection(
+  p1: PIXI.Point,
+  p2: PIXI.Point,
+  p3: PIXI.Point,
+  p4: PIXI.Point,
+): PIXI.Point | null {
+  const u =
+    ((p2.x - p1.x) * (p1.y - p3.y) - (p2.y - p1.y) * (p1.x - p3.x)) /
+    ((p1.x - p2.x) * (p3.y - p4.y) - (p1.y - p2.y) * (p3.x - p4.x));
+
+  const x = p3.x + u * (p4.x - p3.x);
+  const y = p3.y + u * (p4.y - p4.y);
+
+  if (u < 0 || u > 1.0) return null;
+  return new Point(x, y);
+}
+
+/**
+ * Basically like ray projection
+ * @param ballState
+ * @param border
+ * @returns
+ */
+export function projectBallMovement(
+  ballState: BallState,
+  border: PIXI.Graphics,
+): Array<PIXI.Point> {
+  const intersections = [new Point(ballState.x, ballState.y)];
+  const bounds = border.getBounds();
+  const prevBallState = {
+    ...ballState,
+    acceleration: ballState.acceleration.clone(),
+  };
+  const MAX_IT = 10;
+  let borderP1, borderP2;
+  let it = 0;
+
+  while (it++ < MAX_IT) {
+    const downwards = prevBallState.acceleration.y > 0;
+
+    if (downwards) {
+      borderP1 = new Point(bounds.left, bounds.bottom);
+      borderP2 = new Point(bounds.right, bounds.bottom);
+    } else {
+      borderP1 = new Point(bounds.left, bounds.top);
+      borderP2 = new Point(bounds.right, bounds.top);
+    }
+
+    const ballP1 = new Point(prevBallState.x, prevBallState.y);
+    const ballP2 = addVector(
+      multScalar(prevBallState.acceleration.clone(), downwards ? -1000 : 1000),
+      ballP1,
+    );
+
+    // Compute intersection with border
+    const intersection = lineIntersection(ballP1, ballP2, borderP1, borderP2);
+    if (!intersection) break;
+    intersections.push(intersection);
+
+    // Update
+    const newAcc = reflectVector(new Point(0, 1), prevBallState.acceleration);
+    prevBallState.acceleration = newAcc;
+    prevBallState.x = intersection.x;
+    prevBallState.y = intersection.y;
+  }
+
+  // Last intersection will be hit point at left/right wall
+  const rightwards = prevBallState.acceleration.x > 0;
+  if (rightwards) {
+    borderP1 = new Point(bounds.right, bounds.top);
+    borderP2 = new Point(bounds.right, bounds.bottom);
+  } else {
+    borderP1 = new Point(bounds.left, bounds.top);
+    borderP2 = new Point(bounds.left, bounds.bottom);
+  }
+
+  const ballP1 = new Point(prevBallState.x, prevBallState.y);
+  const ballP2 = addVector(
+    multScalar(prevBallState.acceleration.clone(), rightwards ? -1000 : 1000),
+    ballP1,
+  );
+
+  const intersection = lineIntersection(ballP1, ballP2, borderP1, borderP2);
+  if (intersection) intersections.push(intersection);
+
+  console.log('Intersections', intersections);
+  return intersections;
+}
+
+/**
+ *
+ * @param ballState Object state with position and acceleration
+ * @param border border
+ * @returns Points of line segment of obstacle border
+ */
+export function getNextObstacleBorder(
+  ballState: BallState,
+  border: PIXI.Graphics,
+): [PIXI.Point, PIXI.Point] {
+  const bounds = border.getBounds();
+  const downwards = ballState.acceleration.y > 0;
+  let borderP1, borderP2;
+
+  if (downwards) {
+    borderP1 = new Point(bounds.left, bounds.bottom);
+    borderP2 = new Point(bounds.right, bounds.bottom);
+  } else {
+    borderP1 = new Point(bounds.left, bounds.top);
+    borderP2 = new Point(bounds.right, bounds.top);
+  }
+  return [borderP1, borderP2];
 }

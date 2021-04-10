@@ -4,7 +4,9 @@
 - UI: Optimize for mobile
     * remove lag/stop executing tick when player is moved
 - deploy on free static server hosting (e.g. [ZEIT](https://zeit.co/))
-- IDEA: also add small (+artsy) video chat
+- IDEAs:
+    * also add small (+artsy) video chat
+    * Add gravity effects
 - rewrite P2PService:
 	* using rxjs
     * or try to gRPC over webrtc via implementing the Transport Interface: https://github.com/improbable-eng/grpc-web/blob/master/client/grpc-web/src/transports/Transport.ts MOST ADVANCED

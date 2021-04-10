@@ -1,3 +1,4 @@
+import { Graphics, Point } from 'pixi.js';
 import { Observer } from 'rxjs';
 import { map, take } from 'rxjs/operators';
 import GameConfig, {
@@ -6,6 +7,7 @@ import GameConfig, {
   getInitialPlayerState,
 } from '../config/GameConfig';
 import {
+  ballProjection$,
   ballState$,
   countdownTimer,
   debugState$,
@@ -24,8 +26,14 @@ import {
   MESSAGE_EVENTS,
   PlayerState,
 } from '../types/types';
-import { ballUpdate, checkIfObjectInCanvas } from '../util/Physics';
+import {
+  ballUpdate,
+  checkIfObjectInCanvas,
+  lineIntersection,
+  projectBallMovement,
+} from '../util/Physics';
 import { getHashValue } from '../util/UiHelpers';
+import { addVector, multScalar } from '../util/VectorOperations';
 
 export class GameController {
   static instance: GameController;
@@ -40,6 +48,7 @@ export class GameController {
   private ballState$ = ballState$;
   private countdownTimer = countdownTimer;
   private debugState$ = debugState$;
+  private ballProjection = ballProjection$;
 
   private masterPeer = false;
   private pause = false;
@@ -150,7 +159,7 @@ export class GameController {
         data: this.ballState$.getValue(),
       });
     } else {
-      this.ballState$.next(message.data);
+      this.ballState$.next(this.parseMessage(message));
     }
     this.gameState$.update((oldState) => ({
       ...oldState,
@@ -178,7 +187,7 @@ export class GameController {
         data: this.ballState$.getValue(),
       });
     } else {
-      this.ballState$.next(message.data);
+      this.ballState$.next(this.parseMessage(message));
     }
     this.countdownTimer.start();
   }
@@ -248,7 +257,19 @@ export class GameController {
   }
 
   handleBallUpdate(message: Message<BallState>): void {
-    this.ballState$.next(message.data);
+    this.ballState$.next(this.parseMessage(message));
+  }
+
+  // TODO: make proper serialization/deserialization
+  parseMessage(message: Message<BallState>): BallState {
+    const ballState = {
+      ...message.data,
+      acceleration: new Point(
+        message.data.acceleration.x,
+        message.data.acceleration.y,
+      ),
+    };
+    return ballState;
   }
 
   handleDebugCommand(message: Message): void {
@@ -308,7 +329,7 @@ export class GameController {
     ) {
       if (checkIfObjectInCanvas(ball)) {
         this.ballState$.update((prevState) => {
-          const [newState, localPlayerCollision] = ballUpdate(
+          const [newState, collision, localPlayerCollision] = ballUpdate(
             prevState,
             delta,
             localPlayer,
@@ -316,11 +337,19 @@ export class GameController {
             ball,
             border,
           );
-          if (localPlayerCollision) {
-            this.p2pService.sendMessage({
-              event: MESSAGE_EVENTS.ball_update,
-              data: newState,
-            });
+          if (collision) {
+            console.log(
+              'Ball acc',
+              newState.acceleration.x,
+              newState.acceleration.y,
+            );
+            this.projectBallMovement(newState, border);
+            if (localPlayerCollision) {
+              this.p2pService.sendMessage({
+                event: MESSAGE_EVENTS.ball_update,
+                data: newState,
+              });
+            }
           }
           return newState;
         });
@@ -349,5 +378,10 @@ export class GameController {
         }, 2000);
       }
     }
+  }
+
+  projectBallMovement(newState: BallState, border: PIXI.Graphics): void {
+    const intersections = projectBallMovement(newState, border);
+    this.ballProjection.next(intersections);
   }
 }

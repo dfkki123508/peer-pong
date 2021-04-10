@@ -21,6 +21,12 @@ export function reflectVector(normal: PIXI.Point, vec: PIXI.Point): PIXI.Point {
   return new Point(vec.x - 2 * dot * normal.x, vec.y - 2 * dot * normal.y);
 }
 
+export function addVector(p1: PIXI.Point, p2: PIXI.Point): PIXI.Point {
+  p1.x += p2.x;
+  p1.y += p2.y;
+  return p1;
+}
+
 export function addScalar(p: PIXI.Point, n: number): PIXI.Point {
   p.x += n;
   p.y += n;
