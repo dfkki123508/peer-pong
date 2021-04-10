@@ -1,31 +1,28 @@
 import * as React from 'react';
-import { Container, Sprite, Text, useApp, useTick } from '@inlet/react-pixi';
-import { TextStyle, Texture } from 'pixi.js';
+import { Container, useTick } from '@inlet/react-pixi';
 import GameConfig from '../../config/GameConfig';
 import Border from './Border/Border';
 import Countdown from './Countdown/Countdown';
 import { GameController } from '../../controllers/GameController';
 import { useObservable, useSharedState } from '../../util/UseObservable';
 import {
-  ballState$,
   countdownTimer,
-  gameState$,
   localPlayerState$,
   remotePlayerState$,
 } from '../../services/GameStore';
 import { useTouchEvents } from '../../util/UseTouchEvents';
-import Debug from '../Debug/Debug';
+import Ball from './Ball/Ball';
+import Player from './Player/Player';
+import ScoreText from './ScoreText/ScoreText';
 
-const Game = () => {
-  const pixiApp = useApp();
+const Game = (): JSX.Element => {
   const gameController = GameController.getInstance();
 
-  const [gameState] = useSharedState(gameState$);
   const [localPlayerState, setLocalPlayerState] = useSharedState(
     localPlayerState$,
   );
   const [remotePlayerState] = useSharedState(remotePlayerState$);
-  const [ballState] = useSharedState(ballState$);
+  const countdown = useObservable(countdownTimer.observable$);
 
   const localPlayerRef = React.createRef<PIXI.Sprite>();
   const remotePlayerRef = React.createRef<PIXI.Sprite>();
@@ -37,8 +34,6 @@ const Game = () => {
     setLocalPlayerState,
     localPlayerRef,
   );
-
-  const countdown = useObservable(countdownTimer.observable$);
 
   // Register keydown listener
   React.useEffect(() => {
@@ -63,10 +58,6 @@ const Game = () => {
     ),
   );
 
-  const scoreText = (): string => {
-    return `${gameState.score[0]}:${gameState.score[1]}`;
-  };
-
   return (
     <Container>
       <Border
@@ -76,87 +67,22 @@ const Game = () => {
         height={GameConfig.screen.height - GameConfig.screen.padding * 2}
         ref={borderRef}
       />
-      <Sprite
-        texture={Texture.WHITE}
+      <Player
         tint={0x123456}
-        height={120}
-        anchor={0.5}
         ref={localPlayerRef}
         interactive
-        // TODO: mask or wrap this sprite to have bigger region to tap on and move this object via touch screen
         {...touchEvents}
         {...localPlayerState}
       />
-      <Sprite
-        // image="../assets/img/ball.png"
-        texture={Texture.WHITE}
-        tint={0xffffff}
-        anchor={0.5}
-        width={GameConfig.ball.width}
-        height={GameConfig.ball.height}
-        ref={ballRef}
-        {...ballState}
-      />
-      <Sprite
-        texture={Texture.WHITE}
-        tint={0xffffff}
-        anchor={0.5}
-        height={120}
-        ref={remotePlayerRef}
-        {...remotePlayerState}
-      />
-      <Text
-        text={scoreText()}
+      <Ball ref={ballRef} />
+      <Player tint={0xffffff} ref={remotePlayerRef} {...remotePlayerState} />
+      <ScoreText />
+      <Countdown
+        count={countdown}
         anchor={0.5}
         x={GameConfig.screen.width / 2}
-        y={GameConfig.screen.height - GameConfig.screen.padding}
-        style={
-          new TextStyle({
-            align: 'center',
-            fontFamily: '"Source Sans Pro", Helvetica, sans-serif',
-            fontSize: 50,
-            fontWeight: '400',
-            fill: ['#ffffff'], // gradient
-            stroke: '#ffffff',
-            strokeThickness: 5,
-            letterSpacing: 20,
-            dropShadow: true,
-            dropShadowColor: '#ccced2',
-            dropShadowBlur: 4,
-            dropShadowAngle: Math.PI / 6,
-            dropShadowDistance: 6,
-            wordWrap: true,
-            wordWrapWidth: 440,
-          })
-        }
+        y={GameConfig.screen.height / 2}
       />
-      {countdown && countdown > 0 ? (
-        <Countdown
-          count={countdown}
-          anchor={0.5}
-          x={GameConfig.screen.width / 2}
-          y={GameConfig.screen.height / 2}
-          style={
-            new TextStyle({
-              align: 'center',
-              fontFamily: '"Source Sans Pro", Helvetica, sans-serif',
-              fontSize: 50,
-              fontWeight: '400',
-              fill: ['#ffffff'], // gradient
-              stroke: '#ffffff',
-              strokeThickness: 5,
-              letterSpacing: 20,
-              dropShadow: true,
-              dropShadowColor: '#ccced2',
-              dropShadowBlur: 4,
-              dropShadowAngle: Math.PI / 6,
-              dropShadowDistance: 6,
-              wordWrap: true,
-              wordWrapWidth: 440,
-            })
-          }
-        />
-      ) : null}
       {/* <Background /> */}
     </Container>
   );
