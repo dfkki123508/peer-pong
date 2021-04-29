@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { hot } from 'react-hot-loader';
 import './App.scss';
-import { Stage } from '@inlet/react-pixi';
+import { Stage } from '@inlet/react-pixi/animated';
 import GameConfig from '../config/GameConfig';
 import Game from './Game/Game';
 import Menu from './Menu/Menu';
@@ -39,6 +39,7 @@ const App = () => {
           options={{
             backgroundColor: 0x0,
           }}
+          // onPointerUp={() => setTransform(set)}
           ref={stageRef}
         >
           <Game />

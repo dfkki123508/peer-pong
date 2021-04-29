@@ -2,7 +2,6 @@ import React from 'react';
 import './Menu.scss';
 import { useP2PService } from '../../services/P2PService';
 import QRCode from 'qrcode.react';
-import { GameState, GAME_STEP, PlayersSide } from '../../types/types';
 import MenuWrapper from '../MenuWrapper/MenuWrapper';
 import { GameController } from '../../controllers/GameController';
 
@@ -60,7 +59,7 @@ const Menu = ({ open }: MenuPropsType): JSX.Element => {
         </div>
         <div className="qrcode">
           {myId ? (
-            <QRCode value={`http://10.0.0.7:8080/#connectTo=${myId}`} />
+            <QRCode value={`${process.env.BASE_URL}/#connectTo=${myId}`} />
           ) : (
             ''
           )}

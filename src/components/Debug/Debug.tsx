@@ -22,7 +22,7 @@ const Debug = ({ pixiAppRef }: DebugProps) => {
   const gameController = GameController.getInstance();
   // const peerSyncService = usePeerSyncService();
   const [message, setMessage] = React.useState('');
-  const [show, setShow] = React.useState(true);
+  const [show, setShow] = React.useState(false);
   const fps = useObservable(fps$.pipe(throttle(() => interval(500)))); // Throttle fps updates
 
   const onClickResetRound = () => {

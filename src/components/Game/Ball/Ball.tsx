@@ -56,8 +56,8 @@ const Ball = React.forwardRef<PIXI.Sprite>((_props, ref) => {
         ref={ref}
         {...ballState}
       />
-      <Graphics draw={drawMomentum} />
-      <Graphics draw={drawProjection} />
+      {/* <Graphics draw={drawMomentum} />
+      <Graphics draw={drawProjection} /> */}
     </>
   );
 });

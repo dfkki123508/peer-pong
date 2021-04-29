@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Container, useTick } from '@inlet/react-pixi';
+import { Spring } from 'react-spring';
 import GameConfig from '../../config/GameConfig';
 import Border from './Border/Border';
 import Countdown from './Countdown/Countdown';
@@ -14,6 +14,8 @@ import { useTouchEvents } from '../../util/UseTouchEvents';
 import Ball from './Ball/Ball';
 import Player from './Player/Player';
 import ScoreText from './ScoreText/ScoreText';
+import { Container, useApp, useTick } from '@inlet/react-pixi/animated';
+// import { Container } from '@inlet/react-pixi';
 
 const Game = (): JSX.Element => {
   const gameController = GameController.getInstance();
@@ -60,13 +62,7 @@ const Game = (): JSX.Element => {
 
   return (
     <Container>
-      <Border
-        x={GameConfig.screen.padding}
-        y={GameConfig.screen.padding}
-        width={GameConfig.screen.width - GameConfig.screen.padding * 2}
-        height={GameConfig.screen.height - GameConfig.screen.padding * 2}
-        ref={borderRef}
-      />
+      <Border ref={borderRef} />}
       <Player
         tint={0x123456}
         ref={localPlayerRef}
@@ -77,12 +73,12 @@ const Game = (): JSX.Element => {
       <Ball ref={ballRef} />
       <Player tint={0xffffff} ref={remotePlayerRef} {...remotePlayerState} />
       <ScoreText />
-      <Countdown
+      {/* <Countdown
         count={countdown}
         anchor={0.5}
         x={GameConfig.screen.width / 2}
         y={GameConfig.screen.height / 2}
-      />
+      /> */}
       {/* <Background /> */}
     </Container>
   );

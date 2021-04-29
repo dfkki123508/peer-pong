@@ -1,6 +1,6 @@
 import { Point } from 'pixi.js';
 
-// TODO: make x,y PIXI.Point as well
+// TODO: make x,y PIXI.Point as well or acceleration and all properties primitive
 export type BallState = {
   x: number;
   y: number;

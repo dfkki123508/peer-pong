@@ -1,5 +1,5 @@
 import { Text } from 'pixi.js';
-import { applyDefaultProps, PixiComponent } from '@inlet/react-pixi';
+import { applyDefaultProps, PixiComponent } from '@inlet/react-pixi/animated';
 import { TextStyle } from 'pixi.js';
 
 type CountdownPropsType = {

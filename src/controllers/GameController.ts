@@ -1,6 +1,6 @@
 import { Graphics, Point } from 'pixi.js';
 import { Observer } from 'rxjs';
-import { map, take } from 'rxjs/operators';
+import { first, map, take } from 'rxjs/operators';
 import GameConfig, {
   getInitialBallState,
   getInitialGameState,
@@ -26,6 +26,7 @@ import {
   MESSAGE_EVENTS,
   PlayerState,
 } from '../types/types';
+import { getPlayerIndexAfterScore } from '../util/GameHelpers';
 import {
   ballUpdate,
   checkIfObjectInCanvas,
@@ -33,7 +34,6 @@ import {
   projectBallMovement,
 } from '../util/Physics';
 import { getHashValue } from '../util/UiHelpers';
-import { addVector, multScalar } from '../util/VectorOperations';
 
 export class GameController {
   static instance: GameController;
@@ -54,8 +54,8 @@ export class GameController {
   private pause = false;
 
   private constructor() {
-    GameController.numInstances++;
-    console.log('New game controller instance ', GameController.numInstances);
+    // GameController.numInstances++;
+    // console.log('New game controller instance ', GameController.numInstances);
     console.log('p2pservice:', this.p2pService);
 
     this.bindFunctions();
@@ -79,7 +79,9 @@ export class GameController {
     // Connect to remote if url hash value is given
     const peerId = getHashValue('connectTo');
     if (peerId) {
-      this.p2pService.peer$.subscribe(() => this.connectToRemote(peerId));
+      this.p2pService.peer$
+        .pipe(first())
+        .subscribe(() => this.connectToRemote(peerId));
     }
   }
 
@@ -224,6 +226,7 @@ export class GameController {
   }
 
   connectToRemote(inputPeerId: string): void {
+    console.log('ConnectToRemote!', inputPeerId);
     this.p2pService.connect(inputPeerId); // TODO: check that peer me id is ready before
     this.swapPlayersSides();
     this.masterPeer = true; // The one who connects is the master peer
@@ -354,13 +357,12 @@ export class GameController {
           return newState;
         });
       } else {
+        console.log('SCORE!');
+
         this.pause = true;
 
-        const scoreIdx = +!(
-          ball.x + ball.width / 2 >
-          GameConfig.screen.width - GameConfig.screen.padding
-        );
-        console.log('SCORE!');
+        const scoreIdx = getPlayerIndexAfterScore(ball);
+
         this.gameState$.update((oldGameState: GameState) => {
           const newState = Object.assign({}, oldGameState) as GameState;
           newState.score[scoreIdx]++;

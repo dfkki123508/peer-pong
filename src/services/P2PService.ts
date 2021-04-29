@@ -8,7 +8,7 @@ export class P2PService {
   conn$ = new Subject<Subject<Message> | null>();
   message$: Subject<Message> | undefined;
 
-  private me: Peer;
+  me: Peer;
 
   constructor() {
     this.onConnection = this.onConnection.bind(this);
@@ -72,6 +72,24 @@ export class P2PService {
     }
   }
 
+  /**
+   * Iterates over all peers and connections in random order and
+   * @returns the first open connection
+   */
+  private getNextOpenConnection(): Peer.DataConnection {
+    for (const [remotePeerId, connArr] of Object.entries(
+      this.me.connections as { string: Array<Peer.DataConnection> },
+    )) {
+      console.log(remotePeerId, connArr);
+      for (const connObj of connArr) {
+        if (connObj.open) {
+          return connObj;
+        }
+      }
+    }
+    throw new Error('No open connection!');
+  }
+
   sendMessage(msg: string | unknown, conn?: Peer.DataConnection): void {
     if (this.me.disconnected || this.me.destroyed) {
       throw new Error('Peer not connected!');
@@ -79,12 +97,7 @@ export class P2PService {
 
     // Use first data connection, if none specified
     if (!conn) {
-      if (Object.keys(this.me.connections).length < 1) {
-        throw new Error('No open connection!');
-      }
-      conn = (Object.values(
-        this.me.connections,
-      )[0] as Array<Peer.DataConnection>)[0] as Peer.DataConnection;
+      conn = this.getNextOpenConnection();
     }
 
     // console.log('Sending msg over connection:', msg, conn);
@@ -92,7 +105,7 @@ export class P2PService {
     if (!(typeof msg === 'string' || msg instanceof String)) {
       msg = JSON.stringify(msg);
     }
-    
+
     try {
       conn.send(msg);
     } catch (err) {
@@ -102,6 +115,6 @@ export class P2PService {
   }
 }
 
-export const P2PServiceInstance = new P2PService(); // TODO: check if multiple instance are created!!
+export const P2PServiceInstance = new P2PService();
 export const P2PServiceContext = React.createContext(P2PServiceInstance);
 export const useP2PService = () => React.useContext(P2PServiceContext);

@@ -2,6 +2,8 @@ import { Point } from 'pixi.js';
 import { BallState, GameState, GAME_STEP, PlayerState } from '../types/types';
 import { rand } from '../util/Physics';
 
+console.log('PROCESS.env:', process.env);
+
 const GameConfig = {
   player: {
     moveSpeed: 35.0,

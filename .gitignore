@@ -28,3 +28,7 @@ sketch
 !.vscode/launch.json
 !.vscode/extensions.json
 *.code-workspace
+.vercel
+
+# env files
+.env*
