@@ -80,7 +80,6 @@ export class P2PService {
     for (const [remotePeerId, connArr] of Object.entries(
       this.me.connections as { string: Array<Peer.DataConnection> },
     )) {
-      console.log(remotePeerId, connArr);
       for (const connObj of connArr) {
         if (connObj.open) {
           return connObj;

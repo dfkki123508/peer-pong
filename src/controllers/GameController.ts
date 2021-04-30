@@ -34,11 +34,13 @@ import {
   projectBallMovement,
 } from '../util/Physics';
 import { getHashValue } from '../util/UiHelpers';
+import { UiController } from './UiController';
 
 export class GameController {
   static instance: GameController;
   static numInstances = 0;
 
+  private uiController = UiController.getInstance();
   private p2pService = P2PServiceInstance;
   private messageDispatcher = new MessageDispatcher();
 
@@ -346,12 +348,15 @@ export class GameController {
               newState.acceleration.x,
               newState.acceleration.y,
             );
-            this.projectBallMovement(newState, border);
+            // this.projectBallMovement(newState, border);
             if (localPlayerCollision) {
+              this.uiController.bounceLocalPlayer();
               this.p2pService.sendMessage({
                 event: MESSAGE_EVENTS.ball_update,
                 data: newState,
               });
+            } else {
+              this.uiController.bounceRemotePlayer();
             }
           }
           return newState;

@@ -39,7 +39,6 @@ const App = () => {
           options={{
             backgroundColor: 0x0,
           }}
-          // onPointerUp={() => setTransform(set)}
           ref={stageRef}
         >
           <Game />

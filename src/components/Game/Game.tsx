@@ -14,11 +14,12 @@ import { useTouchEvents } from '../../util/UseTouchEvents';
 import Ball from './Ball/Ball';
 import Player from './Player/Player';
 import ScoreText from './ScoreText/ScoreText';
-import { Container, useApp, useTick } from '@inlet/react-pixi/animated';
-// import { Container } from '@inlet/react-pixi';
+import { Container, useTick } from '@inlet/react-pixi/animated';
+import { UiController } from '../../controllers/UiController';
 
 const Game = (): JSX.Element => {
   const gameController = GameController.getInstance();
+  const uiController = UiController.getInstance();
 
   const [localPlayerState, setLocalPlayerState] = useSharedState(
     localPlayerState$,
@@ -62,16 +63,22 @@ const Game = (): JSX.Element => {
 
   return (
     <Container>
-      <Border ref={borderRef} />}
+      <Border ref={borderRef} />
       <Player
         tint={0x123456}
         ref={localPlayerRef}
         interactive
         {...touchEvents}
         {...localPlayerState}
+        xSpring={uiController.localPlayerAnimations.springs.x}
       />
       <Ball ref={ballRef} />
-      <Player tint={0xffffff} ref={remotePlayerRef} {...remotePlayerState} />
+      <Player
+        tint={0xffffff}
+        ref={remotePlayerRef}
+        {...remotePlayerState}
+        xSpring={uiController.remotePlayerAnimations.springs.x}
+      />
       <ScoreText />
       {/* <Countdown
         count={countdown}

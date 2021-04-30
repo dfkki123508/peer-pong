@@ -1,4 +1,5 @@
 import { Point } from 'pixi.js';
+import { SpringValue } from 'react-spring';
 
 // TODO: make x,y PIXI.Point as well or acceleration and all properties primitive
 export type BallState = {
