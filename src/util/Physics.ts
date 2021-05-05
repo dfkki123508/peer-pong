@@ -4,6 +4,7 @@ import { BallState } from '../types/types';
 import {
   addVector,
   divScalar,
+  lineIntersection,
   multScalar,
   norm,
   reflectVector,
@@ -155,23 +156,6 @@ export function ballUpdate(
   newState.y += acceleration.y * delta;
   newState.acceleration = acceleration;
   return [newState, collision, localPlayerCollision];
-}
-
-export function lineIntersection(
-  p1: PIXI.Point,
-  p2: PIXI.Point,
-  p3: PIXI.Point,
-  p4: PIXI.Point,
-): PIXI.Point | null {
-  const u =
-    ((p2.x - p1.x) * (p1.y - p3.y) - (p2.y - p1.y) * (p1.x - p3.x)) /
-    ((p1.x - p2.x) * (p3.y - p4.y) - (p1.y - p2.y) * (p3.x - p4.x));
-
-  const x = p3.x + u * (p4.x - p3.x);
-  const y = p3.y + u * (p4.y - p4.y);
-
-  if (u < 0 || u > 1.0) return null;
-  return new Point(x, y);
 }
 
 /**

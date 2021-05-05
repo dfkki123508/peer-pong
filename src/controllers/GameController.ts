@@ -30,7 +30,6 @@ import { getPlayerIndexAfterScore } from '../util/GameHelpers';
 import {
   ballUpdate,
   checkIfObjectInCanvas,
-  lineIntersection,
   projectBallMovement,
 } from '../util/Physics';
 import { getHashValue } from '../util/UiHelpers';
