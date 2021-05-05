@@ -1,7 +1,6 @@
 import * as React from 'react';
 import { hot } from 'react-hot-loader';
 import './App.scss';
-import { Stage } from '@inlet/react-pixi/animated';
 import GameConfig from '../config/GameConfig';
 import Game from './Game/Game';
 import Menu from './Menu/Menu';
@@ -12,6 +11,9 @@ import Debug from './Debug/Debug';
 import { useSharedState } from '../util/UseObservable';
 import { gameState$, fps$ } from '../services/GameStore';
 import * as PIXI from 'pixi.js';
+import PixiComponent from './PixiComponent/PixiComponent';
+import { app, sketch } from '../controllers/Sketch';
+import { Sprite, Stage } from 'react-pixi-fiber';
 
 const defaultRender = PIXI.Renderer.prototype.render;
 
@@ -27,12 +29,12 @@ PIXI.Renderer.prototype.render = function render(...args): void {
 
 const App = () => {
   const [gameState] = useSharedState(gameState$);
-  const stageRef = React.createRef<Stage & { app: PIXI.Application }>();
+  // const stageRef = React.createRef<Stage & { app: PIXI.Application }>();
 
   return (
     <div className="app-container">
       <div className="game-container">
-        <Stage
+        {/* <Stage
           className="game-element"
           width={GameConfig.screen.width}
           height={GameConfig.screen.height}
@@ -42,9 +44,10 @@ const App = () => {
           ref={stageRef}
         >
           <Game />
-        </Stage>
+        </Stage> */}
+        <PixiComponent sketch={sketch} width={800} height={600} />
       </div>
-      {gameState.step === GAME_STEP.INIT && (
+      {/* {gameState.step === GAME_STEP.INIT && (
         <Menu open={gameState.step === GAME_STEP.INIT} />
       )}
       {gameState.step === GAME_STEP.READY_TO_PLAY && (
@@ -53,7 +56,7 @@ const App = () => {
       {gameState.step === GAME_STEP.FINISHED && (
         <Result open={gameState.step === GAME_STEP.FINISHED} />
       )}
-      <Debug pixiAppRef={stageRef} />
+      <Debug pixiAppRef={stageRef} /> */}
     </div>
   );
 };
