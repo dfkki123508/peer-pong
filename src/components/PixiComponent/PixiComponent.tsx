@@ -1,9 +1,8 @@
 import React from 'react';
 import * as PIXI from 'pixi.js';
+import Sketch from '../../controllers/Sketch';
 
-type PixiComponentProps = {
-  sketch: (app: PIXI.Application) => void;
-} & PixiApplicationOptions;
+type PixiComponentProps = PixiApplicationOptions;
 
 type PixiApplicationOptions = {
   autoStart?: boolean;
@@ -24,32 +23,27 @@ type PixiApplicationOptions = {
   resizeTo?: Window | HTMLElement;
 };
 
-const PixiComponent = ({
-  sketch,
-  ...appProps
-}: PixiComponentProps): JSX.Element => {
+const PixiComponent = (props: PixiComponentProps): JSX.Element => {
   const wrapperRef = React.createRef<HTMLDivElement>();
 
   React.useEffect(() => {
-    const app = new PIXI.Application(appProps);
+    const app = new PIXI.Application(props);
 
     let canvas: HTMLCanvasElement;
     if (wrapperRef && wrapperRef.current) {
       canvas = wrapperRef.current.appendChild(app.view);
     }
 
-    sketch(app);
+    const sketch = new Sketch(app);
 
     return () => {
+      app.destroy();
       if (canvas) {
         canvas.remove();
       }
-      console.log('Cleaning up', sketch.cleanup);
-      if (sketch.cleanup) {
-        sketch.cleanup();
-      }
+      sketch.cleanup();
     };
-  }, [wrapperRef, sketch, appProps]);
+  }, [props, wrapperRef]);
 
   return <div ref={wrapperRef} />;
 };

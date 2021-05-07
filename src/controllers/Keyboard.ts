@@ -5,12 +5,17 @@ export default class Keyboard {
   press: (() => void) | undefined;
   release: (() => void) | undefined;
 
+  private _downListener: (event: KeyboardEvent) => void;
+  private _upListener: (event: KeyboardEvent) => void;
+
   constructor(value: string) {
     this.value = value;
     this.isDown = false;
     this.isUp = true;
-    window.addEventListener('keydown', this.downHandler.bind(this));
-    window.addEventListener('keyup', this.upHandler.bind(this));
+    this._downListener = this.downHandler.bind(this);
+    this._upListener = this.upHandler.bind(this);
+    window.addEventListener('keydown', this._downListener);
+    window.addEventListener('keyup', this._upListener);
   }
 
   downHandler(event: KeyboardEvent): void {
@@ -32,7 +37,7 @@ export default class Keyboard {
   }
 
   unsubscribe(): void {
-    window.removeEventListener('keydown', this.downHandler);
-    window.removeEventListener('keyup', this.upHandler);
+    window.removeEventListener('keydown', this._downListener);
+    window.removeEventListener('keyup', this._upListener);
   }
 }
