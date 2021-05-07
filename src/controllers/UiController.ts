@@ -58,7 +58,7 @@ export class UiController {
   }
 
   private getPlayerAnimationObject(currX: number) {
-    const displacement = currX > GameConfig.screen.width / 2 ? 50 : 50;
+    const displacement = currX > GameConfig.screen.width / 2 ? 50 : -50;
     return {
       from: { x: currX + displacement },
       to: { x: currX },

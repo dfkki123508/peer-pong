@@ -44,6 +44,10 @@ const PixiComponent = ({
       if (canvas) {
         canvas.remove();
       }
+      console.log('Cleaning up', sketch.cleanup);
+      if (sketch.cleanup) {
+        sketch.cleanup();
+      }
     };
   }, [wrapperRef, sketch, appProps]);
 
