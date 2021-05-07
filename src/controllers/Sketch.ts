@@ -1,6 +1,9 @@
 import * as PIXI from 'pixi.js';
 import anime from 'animejs/lib/anime.es.js';
 import { testForAABB } from '../util/Physics';
+import GameConfig from '../config/GameConfig';
+import { getPlayerIndexAfterScore } from '../util/GameHelpers';
+import Keyboard from './Keyboard';
 
 type GameStateFn = (delta: number) => void;
 
@@ -13,21 +16,31 @@ export const sketch = function (app: PIXI.Application): void {
   let player1: PIXI.Sprite,
     player2: PIXI.Sprite,
     ball: Ball,
-    border: PIXI.Graphics;
+    border: PIXI.Graphics,
+    scoreText: PIXI.Text;
   let gameState: GameStateFn | undefined;
-  // let prevGameState: GameStateFn | undefined;
   let keyObject: Keyboard;
   let stopped = false;
+  const score = [0, 0];
 
   function setup() {
+    // border
+    border = new PIXI.Graphics();
+    border.lineStyle(1, 0xfeeb77, 1);
+    border.drawRect(20, 20, app.view.width - 20 * 2, app.view.height - 20 * 2);
+    border.endFill();
+
+    app.stage.addChild(border);
+
     // players
     player1 = new PIXI.Sprite(PIXI.Texture.WHITE);
+    player1.tint = 0x123456;
     player2 = new PIXI.Sprite(PIXI.Texture.WHITE);
     player1.height = player2.height = 120;
     player1.anchor.set(0.5);
     player2.anchor.set(0.5);
-    player1.x = 20;
-    player2.x = app.view.width - 20;
+    player1.x = GameConfig.screen.padding;
+    player2.x = app.view.width - GameConfig.screen.padding;
     player1.y = player2.y = app.view.height / 2;
 
     player1.interactive = player2.interactive = true;
@@ -36,20 +49,39 @@ export const sketch = function (app: PIXI.Application): void {
 
     app.stage.addChild(player1, player2);
 
+    // score text
+    scoreText = new PIXI.Text(
+      `${score[0]}:${score[1]}`,
+      new PIXI.TextStyle({
+        align: 'center',
+        fontFamily: '"Source Sans Pro", Helvetica, sans-serif',
+        fontSize: 50,
+        fontWeight: '400',
+        fill: ['#ffffff'], // gradient
+        stroke: '#ffffff',
+        strokeThickness: 5,
+        letterSpacing: 20,
+        dropShadow: true,
+        dropShadowColor: '#ccced2',
+        dropShadowBlur: 4,
+        dropShadowAngle: Math.PI / 6,
+        dropShadowDistance: 6,
+        wordWrap: true,
+        wordWrapWidth: 440,
+      }),
+    );
+    scoreText.x = GameConfig.screen.width / 2;
+    scoreText.y = GameConfig.screen.height - GameConfig.screen.padding;
+    scoreText.anchor.set(0.5);
+
+    app.stage.addChild(scoreText);
+
     // ball
     ball = new PIXI.Sprite(PIXI.Texture.WHITE);
     ball.anchor.set(0.5);
     resetBall();
 
     app.stage.addChild(ball);
-
-    // border
-    border = new PIXI.Graphics();
-    border.lineStyle(1, 0xfeeb77, 1);
-    border.drawRect(20, 20, app.view.width - 20 * 2, app.view.height - 20 * 2);
-    border.endFill();
-
-    app.stage.addChild(border);
 
     // Keyboard Interactions
     // Space to suspend/resume game loop
@@ -153,11 +185,13 @@ export const sketch = function (app: PIXI.Application): void {
     ball: Ball,
     collisionObject: PIXI.Container | string,
   ) {
-    const speedUpFactor = 1.5;
     if (collisionObject === 'top' || collisionObject === 'bottom') {
       ball.vy *= -1;
     } else if (collisionObject === 'left' || collisionObject === 'right') {
       console.log('SCORE');
+      const scoreIdx = getPlayerIndexAfterScore(ball);
+      score[scoreIdx]++;
+      scoreText.text = `${score[0]}:${score[1]}`;
       resetBall();
     } else if (collisionObject === player1) {
       anime({
@@ -169,8 +203,8 @@ export const sketch = function (app: PIXI.Application): void {
         easing: 'linear',
       });
 
-      ball.vx *= -speedUpFactor;
-      ball.vy *= speedUpFactor;
+      ball.vx *= -GameConfig.ball.speedUp;
+      ball.vy *= GameConfig.ball.speedUp;
     } else if (collisionObject === player2) {
       anime({
         targets: player2,
@@ -181,16 +215,23 @@ export const sketch = function (app: PIXI.Application): void {
         easing: 'linear',
       });
 
-      ball.vx *= -speedUpFactor;
-      ball.vy *= speedUpFactor;
+      ball.vx *= -GameConfig.ball.speedUp;
+      ball.vy *= GameConfig.ball.speedUp;
     }
   }
 
+  // Other functions
   function resetBall() {
     ball.x = app.view.width / 2;
     ball.y = app.view.height / 2;
     ball.vx = 2.2;
     ball.vy = 1.1;
+  }
+
+  function swapPlayersSides() {
+    const copyX = player1.x;
+    player1.x = player2.x;
+    player2.x = copyX;
   }
 
   function gameLoop(delta: number) {
@@ -207,129 +248,3 @@ export const sketch = function (app: PIXI.Application): void {
 
   setup();
 };
-
-class Keyboard {
-  value: string;
-  isDown: boolean;
-  isUp: boolean;
-  press: (() => void) | undefined;
-  release: (() => void) | undefined;
-
-  constructor(value: string) {
-    this.value = value;
-    this.isDown = false;
-    this.isUp = true;
-    window.addEventListener('keydown', this.downHandler.bind(this));
-    window.addEventListener('keyup', this.upHandler.bind(this));
-  }
-
-  downHandler(event: KeyboardEvent) {
-    if (event.key === this.value) {
-      if (this.isUp && this.press) this.press();
-      this.isDown = true;
-      this.isUp = false;
-      event.preventDefault();
-    }
-  }
-
-  upHandler(event: KeyboardEvent) {
-    if (event.key === this.value) {
-      if (this.isDown && this.release) this.release();
-      this.isDown = false;
-      this.isUp = true;
-      event.preventDefault();
-    }
-  }
-
-  unsubscribe() {
-    window.removeEventListener('keydown', this.downHandler);
-    window.removeEventListener('keyup', this.upHandler);
-  }
-}
-
-function background(app) {
-  // Get the texture for rope.
-  const starTexture = PIXI.Texture.from('src/assets/star.png');
-
-  const scale = 0.01;
-
-  const starAmount = 1000;
-  let cameraZ = 0;
-  const fov = 20;
-  const baseSpeed = 0.025;
-  let speed = 0;
-  let warpSpeed = 0;
-  const starStretch = 5;
-  const starBaseSize = 0.05;
-
-  // Create the stars
-  const stars = [];
-  for (let i = 0; i < starAmount; i++) {
-    const star = {
-      sprite: new PIXI.Sprite(starTexture),
-      z: 0,
-      x: 0,
-      y: 0,
-    };
-    star.sprite.scale.x = scale;
-    star.sprite.scale.y = scale;
-    star.sprite.anchor.x = 0.5;
-    star.sprite.anchor.y = 0.7;
-    randomizeStar(star, true);
-    app.stage.addChild(star.sprite);
-    stars.push(star);
-  }
-
-  function randomizeStar(star, initial) {
-    star.z = initial
-      ? Math.random() * 2000
-      : cameraZ + Math.random() * 1000 + 2000;
-
-    // Calculate star positions with radial random coordinate so no star hits the camera.
-    const deg = Math.random() * Math.PI * 2;
-    const distance = Math.random() * 50 + 1;
-    star.x = Math.cos(deg) * distance;
-    star.y = Math.sin(deg) * distance;
-  }
-
-  // Change flight speed every 5 seconds
-  setInterval(() => {
-    warpSpeed = warpSpeed > 0 ? 0 : 1;
-  }, 5000);
-
-  // Listen for animate update
-  app.ticker.add((delta) => {
-    // Simple easing. This should be changed to proper easing function when used for real.
-    speed += (warpSpeed - speed) / 20;
-    cameraZ += delta * 10 * (speed + baseSpeed);
-    for (let i = 0; i < starAmount; i++) {
-      const star = stars[i];
-      if (star.z < cameraZ) randomizeStar(star);
-
-      // Map star 3d position to 2d with really simple projection
-      const z = star.z - cameraZ;
-      star.sprite.x =
-        star.x * (fov / z) * app.renderer.screen.width +
-        app.renderer.screen.width / 2;
-      star.sprite.y =
-        star.y * (fov / z) * app.renderer.screen.width +
-        app.renderer.screen.height / 2;
-
-      // Calculate star scale & rotation.
-      const dxCenter = star.sprite.x - app.renderer.screen.width / 2;
-      const dyCenter = star.sprite.y - app.renderer.screen.height / 2;
-      const distanceCenter = Math.sqrt(
-        dxCenter * dxCenter + dyCenter * dyCenter,
-      );
-      const distanceScale = Math.max(0, (2000 - z) / 2000);
-      star.sprite.scale.x = distanceScale * starBaseSize;
-      // Star is looking towards center so that y axis is towards center.
-      // Scale the star depending on how fast we are moving, what the stretchfactor is and depending on how far away it is from the center.
-      star.sprite.scale.y =
-        distanceScale * starBaseSize +
-        (distanceScale * speed * starStretch * distanceCenter) /
-          app.renderer.screen.width;
-      star.sprite.rotation = Math.atan2(dyCenter, dxCenter) + Math.PI / 2;
-    }
-  });
-}
