@@ -21,7 +21,7 @@ const Menu = ({ open }: MenuPropsType): JSX.Element => {
       setMyId(peer.id);
     });
     return () => sub.unsubscribe();
-  }, []);
+  }, [p2pService.peer$]);
 
   const onClickConnect = () => {
     if (inputPeerId && inputPeerId != '') {

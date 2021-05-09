@@ -1,7 +1,7 @@
 import * as PIXI from 'pixi.js';
+import GameConfig from '../config/GameConfig';
 
 const width = 2000;
-const starAmount = 1000;
 const fov = 20;
 const baseSpeed = 0.025;
 const starStretch = 5;
@@ -23,7 +23,7 @@ export default class Background {
     const starTexture = PIXI.Texture.from('src/assets/star.png');
 
     // Create the stars
-    for (let i = 0; i < starAmount; i++) {
+    for (let i = 0; i < GameConfig.background.numStars; i++) {
       const star = {
         sprite: new PIXI.Sprite(starTexture),
         z: 0,
@@ -62,7 +62,7 @@ export default class Background {
     // Simple easing. This should be changed to proper easing function when used for real.
     this.speed += (this.warpSpeed - this.speed) / 20;
     this.cameraZ += delta * 10 * (this.speed + baseSpeed);
-    for (let i = 0; i < starAmount; i++) {
+    for (let i = 0; i < GameConfig.background.numStars; i++) {
       const star = this.stars[i];
       if (star.z < this.cameraZ) this.randomizeStar(star);
 

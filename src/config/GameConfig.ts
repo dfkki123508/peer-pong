@@ -1,4 +1,4 @@
-import { Point } from 'pixi.js';
+import { Point, TextStyle } from 'pixi.js';
 import { BallState, GameState, GAME_STEP, PlayerState } from '../types/types';
 import { rand } from '../util/Physics';
 
@@ -17,12 +17,31 @@ const GameConfig = {
     speedUp: 1.1,
   },
   game: {
-    countdownLength: 3.0, // seconds
+    countdownLength: 3499, // milliseconds
     finishScore: 5,
   },
   screen: { height: 600, width: 800, padding: 20 },
   background: {
-    numStars: 100,
+    numStars: 1000,
+  },
+  ui: {
+    textStyle: new TextStyle({
+      align: 'center',
+      fontFamily: '"Source Sans Pro", Helvetica, sans-serif',
+      fontSize: 50,
+      fontWeight: '400',
+      fill: ['#ffffff'], // gradient
+      stroke: '#ffffff',
+      strokeThickness: 5,
+      letterSpacing: 20,
+      dropShadow: true,
+      dropShadowColor: '#ccced2',
+      dropShadowBlur: 4,
+      dropShadowAngle: Math.PI / 6,
+      dropShadowDistance: 6,
+      wordWrap: true,
+      wordWrapWidth: 440,
+    }),
   },
   debug: {
     on: true,

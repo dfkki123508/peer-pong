@@ -30,7 +30,7 @@ const App = () => {
   return (
     <div className="app-container">
       <div className="game-container">
-        <PixiComponent width={800} height={600} />
+        <PixiComponent />
       </div>
       {/* {gameState.step === GAME_STEP.INIT && (
         <Menu open={gameState.step === GAME_STEP.INIT} />

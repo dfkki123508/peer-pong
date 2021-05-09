@@ -4,7 +4,8 @@ import { testForAABB } from '../util/Physics';
 import GameConfig from '../config/GameConfig';
 import { getPlayerIndexAfterScore } from '../util/GameHelpers';
 import Keyboard from './Keyboard';
-import Background, { background } from './Background';
+import Background from './Background';
+import { PixiApplicationOptions } from '../types/types';
 
 type GameStateFn = (delta: number) => void;
 
@@ -16,20 +17,28 @@ type Ball = PIXI.Sprite & {
 type Collision = PIXI.Sprite | 'top' | 'bottom' | 'left' | 'right';
 
 export default class Sketch {
+  private static instance: Sketch | undefined;
+
   app: PIXI.Application;
   player1: PIXI.Sprite;
   player2: PIXI.Sprite;
   ball: Ball;
   border: PIXI.Graphics;
   scoreText: PIXI.Text;
+  countDown: PIXI.Text;
   gameState: GameStateFn | undefined;
   keyObject: Keyboard;
   background: Background;
   stopped = false;
   score = [0, 0];
+  countDownStartTime = -1;
+  countDownTime = -1;
 
-  constructor(app: PIXI.Application) {
-    this.app = app;
+  private constructor() {
+    this.app = new PIXI.Application({
+      width: GameConfig.screen.width,
+      height: GameConfig.screen.height,
+    });
 
     // Create background
     this.background = new Background(this.app);
@@ -70,24 +79,8 @@ export default class Sketch {
 
     // score text
     this.scoreText = new PIXI.Text(
-      `${this.score[0]}:${this.score[1]}`,
-      new PIXI.TextStyle({
-        align: 'center',
-        fontFamily: '"Source Sans Pro", Helvetica, sans-serif',
-        fontSize: 50,
-        fontWeight: '400',
-        fill: ['#ffffff'], // gradient
-        stroke: '#ffffff',
-        strokeThickness: 5,
-        letterSpacing: 20,
-        dropShadow: true,
-        dropShadowColor: '#ccced2',
-        dropShadowBlur: 4,
-        dropShadowAngle: Math.PI / 6,
-        dropShadowDistance: 6,
-        wordWrap: true,
-        wordWrapWidth: 440,
-      }),
+      this.getScoreText(),
+      GameConfig.ui.textStyle,
     );
     this.scoreText.x = GameConfig.screen.width / 2;
     this.scoreText.y = GameConfig.screen.height - GameConfig.screen.padding;
@@ -95,12 +88,20 @@ export default class Sketch {
 
     this.app.stage.addChild(this.scoreText);
 
-    // this.ball
+    // ball
     this.ball = new PIXI.Sprite(PIXI.Texture.WHITE);
     this.ball.anchor.set(0.5);
     this.resetBall();
 
     this.app.stage.addChild(this.ball);
+
+    // Start round Countdown
+    this.countDown = new PIXI.Text('', GameConfig.ui.textStyle);
+    this.countDown.x = GameConfig.screen.width / 2;
+    this.countDown.y = GameConfig.screen.height / 2;
+    this.countDown.anchor.set(0.5);
+
+    this.app.stage.addChild(this.countDown);
 
     // Keyboard Interactions
     // Space to suspend/resume game loop
@@ -117,7 +118,7 @@ export default class Sketch {
     };
 
     // set state
-    this.gameState = this.play;
+    this.gameState = this.startRoundTransition;
 
     //Start the game loop
     this.app.ticker.add((delta) => this.gameLoop(delta));
@@ -126,6 +127,13 @@ export default class Sketch {
     console.log('player2:', this.player2);
     console.log('ball', this.ball);
     console.log('border', this.border);
+  }
+
+  static getInstance(): Sketch {
+    if (!Sketch.instance) {
+      Sketch.instance = new Sketch();
+    }
+    return Sketch.instance;
   }
 
   // Interaction
@@ -149,6 +157,51 @@ export default class Sketch {
     }
   }
 
+  startRoundState(delta: number): void {
+    const elapsed = Date.now() - this.countDownStartTime;
+    this.countDownStartTime = Date.now();
+    this.countDownTime += elapsed;
+    const countDownTextTime = Math.round(
+      (GameConfig.game.countdownLength - this.countDownTime) / 1000,
+    );
+    if (countDownTextTime <= 0) {
+      this.countDown.visible = false;
+      this.gameState = this.play;
+      return;
+    }
+    this.countDown.text = `${countDownTextTime}`;
+  }
+
+  // State transitions
+  /**
+   *
+   * @param offset Shorten or lengthen the timer by offset millisecons
+   */
+  startRoundTransition(offset = 0): void {
+    this.resetCountdown(offset);
+    this.gameState = this.startRoundState;
+  }
+
+  startGameTransition(): void {
+    this.gameState = this.play;
+  }
+
+  finishGameTransition(): void {
+    this.gameState = undefined;
+  }
+
+  scoreTransition(): void {
+    this.background.triggerWarp(700);
+    this.calcScore();
+    this.resetBall();
+    if (Math.max(...this.score) >= 2) {
+      this.finishGameTransition();
+    } else {
+      this.startRoundTransition();
+    }
+  }
+
+  // Collision Detection and Response
   collisionDetection(): Collision | undefined {
     const ballBounds = this.ball.getBounds();
     const borderBounds = this.border.getBounds();
@@ -200,16 +253,17 @@ export default class Sketch {
   }
 
   collisionResponse(collisionObject: Collision): void {
+    // Top and bottom borders
     if (collisionObject === 'top' || collisionObject === 'bottom') {
       this.ball.vy *= -1;
-    } else if (collisionObject === 'left' || collisionObject === 'right') {
+    }
+    // Left and right borders
+    else if (collisionObject === 'left' || collisionObject === 'right') {
       console.log('SCORE');
-      this.background.triggerWarp(700);
-      const scoreIdx = getPlayerIndexAfterScore(this.ball);
-      this.score[scoreIdx]++;
-      this.scoreText.text = `${this.score[0]}:${this.score[1]}`;
-      this.resetBall();
-    } else if (collisionObject === this.player1) {
+      this.scoreTransition();
+    }
+    // Local player
+    else if (collisionObject === this.player1) {
       anime({
         targets: this.player1,
         x: this.player1.x - 15,
@@ -221,7 +275,9 @@ export default class Sketch {
 
       this.ball.vx *= -GameConfig.ball.speedUp;
       this.ball.vy *= GameConfig.ball.speedUp;
-    } else if (collisionObject === this.player2) {
+    }
+    // Remote player
+    else if (collisionObject === this.player2) {
       anime({
         targets: this.player2,
         x: this.player2.x + 15,
@@ -244,6 +300,22 @@ export default class Sketch {
     this.ball.vy = 1.1;
   }
 
+  resetCountdown(offset = 0): void {
+    this.countDownStartTime = Date.now() + offset;
+    this.countDownTime = 0.0;
+    this.countDown.visible = true;
+  }
+
+  calcScore(): void {
+    const scoreIdx = getPlayerIndexAfterScore(this.ball);
+    this.score[scoreIdx]++;
+    this.scoreText.text = this.getScoreText();
+  }
+
+  getScoreText(): string {
+    return `${this.score[0]}:${this.score[1]}`;
+  }
+
   swapPlayersSides(): void {
     const copyX = this.player1.x;
     this.player1.x = this.player2.x;
@@ -256,9 +328,11 @@ export default class Sketch {
     }
   }
 
-  // TODO
-  cleanup(): void {
+  // Should be called upon destruction
+  destroy(): void {
     console.log('Cleaning up!');
+    this.app.destroy();
     this.keyObject.unsubscribe();
+    Sketch.instance = undefined;
   }
 }

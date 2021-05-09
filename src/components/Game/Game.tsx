@@ -1,5 +1,4 @@
 import * as React from 'react';
-import { Spring } from 'react-spring';
 import GameConfig from '../../config/GameConfig';
 import Border from './Border/Border';
 import Countdown from './Countdown/Countdown';
@@ -13,13 +12,9 @@ import {
 import { useTouchEvents } from '../../util/UseTouchEvents';
 import Ball from './Ball/Ball';
 import Player from './Player/Player';
-import ScoreText from './ScoreText/ScoreText';
-import { Container, useTick } from '@inlet/react-pixi/animated';
-import { UiController } from '../../controllers/UiController';
 
 const Game = (): JSX.Element => {
   const gameController = GameController.getInstance();
-  const uiController = UiController.getInstance();
 
   const [localPlayerState, setLocalPlayerState] = useSharedState(
     localPlayerState$,
