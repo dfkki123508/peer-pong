@@ -5,6 +5,9 @@
             "dom.iterable",
             "esnext"
         ],
+        "emitDecoratorMetadata": true,
+        "experimentalDecorators": true,
+        "target": "ES5",
         "allowJs": true,
         "allowSyntheticDefaultImports": true,
         "skipLibCheck": true,
@@ -15,7 +18,7 @@
         "resolveJsonModule": true,
         "isolatedModules": true,
         "noEmit": true,
-        "jsx": "react"
+        "jsx": "react",
     },
     "include": [
         "src"

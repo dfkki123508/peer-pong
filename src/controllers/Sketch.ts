@@ -5,7 +5,11 @@ import GameConfig from '../config/GameConfig';
 import { getPlayerIndexAfterScore } from '../util/GameHelpers';
 import Keyboard from './Keyboard';
 import Background from './Background';
-import { PixiApplicationOptions } from '../types/types';
+import { Collision, PixiApplicationOptions } from '../types/types';
+// import RemoteAction from '../util/RemoteAction';
+import { newCollisionStore$, newPlayerStore$, remotePlayerStore$ } from '../services/GameStore';
+import { Subscription } from 'rxjs';
+import { RemoteController } from './RemoteController';
 
 type GameStateFn = (delta: number) => void;
 
@@ -13,8 +17,6 @@ type Ball = PIXI.Sprite & {
   vx: number;
   vy: number;
 };
-
-type Collision = PIXI.Sprite | 'top' | 'bottom' | 'left' | 'right';
 
 export default class Sketch {
   private static instance: Sketch | undefined;
@@ -33,6 +35,9 @@ export default class Sketch {
   score = [0, 0];
   countDownStartTime = -1;
   countDownTime = -1;
+
+  remoteController = RemoteController.getInstance();
+  subs: Array<Subscription> = [];
 
   private constructor() {
     this.app = new PIXI.Application({
@@ -65,7 +70,8 @@ export default class Sketch {
     this.player2.anchor.set(0.5);
     this.player1.x = GameConfig.screen.padding;
     this.player2.x = this.app.view.width - GameConfig.screen.padding;
-    this.player1.y = this.player2.y = this.app.view.height / 2;
+    this.subs.push(newPlayerStore$.addObserver(this.player1, 'y'));
+    this.subs.push(remotePlayerStore$.addObserver(this.player2, 'y'));
 
     this.player1.interactive = this.player2.interactive = true;
     this.player1.on('mousemove', (event: PIXI.InteractionEvent) =>
@@ -120,6 +126,10 @@ export default class Sketch {
     // set state
     this.gameState = this.startRoundTransition;
 
+    // debug
+    // this.app.stop();
+    // this.stopped = true;
+
     //Start the game loop
     this.app.ticker.add((delta) => this.gameLoop(delta));
 
@@ -139,8 +149,13 @@ export default class Sketch {
   // Interaction
   onMouseMove(sprite: PIXI.Sprite, event: PIXI.InteractionEvent): void {
     const newPosition = event.data.getLocalPosition(sprite.parent);
-    if (newPosition.y > 0 && newPosition.y < this.app.view.height) {
-      sprite.y = newPosition.y;
+    if (
+      !this.stopped &&
+      newPosition.y > 0 &&
+      newPosition.y < this.app.view.height
+    ) {
+      newPlayerStore$.next(newPosition.y);
+      // sprite.y = newPosition.y;
     }
   }
 
@@ -153,6 +168,7 @@ export default class Sketch {
 
     const collision = this.collisionDetection();
     if (collision) {
+      newCollisionStore$.next(collision);
       this.collisionResponse(collision);
     }
   }
@@ -166,7 +182,7 @@ export default class Sketch {
     );
     if (countDownTextTime <= 0) {
       this.countDown.visible = false;
-      this.gameState = this.play;
+      this.startGameTransition();
       return;
     }
     this.countDown.text = `${countDownTextTime}`;
@@ -175,7 +191,7 @@ export default class Sketch {
   // State transitions
   /**
    *
-   * @param offset Shorten or lengthen the timer by offset millisecons
+   * @param offset Shorten or lengthen the timer by @param offset millisecons
    */
   startRoundTransition(offset = 0): void {
     this.resetCountdown(offset);
@@ -190,6 +206,7 @@ export default class Sketch {
     this.gameState = undefined;
   }
 
+  // @RemoteAction
   scoreTransition(): void {
     this.background.triggerWarp(700);
     this.calcScore();
@@ -264,6 +281,11 @@ export default class Sketch {
     }
     // Local player
     else if (collisionObject === this.player1) {
+      // this.p2pService.sendMessage({
+      //   event: MESSAGE_EVENTS.ball_update,
+      //   data: newState,
+      // });
+
       anime({
         targets: this.player1,
         x: this.player1.x - 15,
@@ -331,6 +353,8 @@ export default class Sketch {
   // Should be called upon destruction
   destroy(): void {
     console.log('Cleaning up!');
+    this.remoteController.destroy();
+    this.subs.forEach((s) => s.unsubscribe());
     this.app.destroy();
     this.keyObject.unsubscribe();
     Sketch.instance = undefined;

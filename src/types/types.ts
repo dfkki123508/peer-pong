@@ -70,3 +70,5 @@ export type PixiApplicationOptions = {
   sharedLoader?: boolean;
   resizeTo?: Window | HTMLElement;
 };
+
+export type Collision = PIXI.Sprite | 'top' | 'bottom' | 'left' | 'right';

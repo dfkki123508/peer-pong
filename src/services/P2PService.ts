@@ -1,12 +1,11 @@
 import { Subject } from 'rxjs';
 import Peer from 'peerjs';
 import React from 'react';
-import { Message } from '../types/types';
 
 export class P2PService {
   peer$ = new Subject<Peer>();
-  conn$ = new Subject<Subject<Message> | null>();
-  message$: Subject<Message> | undefined;
+  conn$ = new Subject<Subject<string> | null>();
+  message$: Subject<string> | undefined;
 
   me: Peer;
 
@@ -26,13 +25,11 @@ export class P2PService {
 
     // TODO: add check to only allow one connection
 
-    this.message$ = new Subject<Message>();
+    this.message$ = new Subject<string>();
     this.conn$.next(this.message$);
     conn.on('error', (err) => console.error(err));
     conn.on('open', () => this.peer$.next(this.me));
-    conn.on('data', (data: unknown) =>
-      this.message$.next(JSON.parse(data as string) as Message),
-    );
+    conn.on('data', (data: string) => this.message$.next(data));
     conn.on('close', () => this.message$.complete());
   }
 
@@ -75,6 +72,7 @@ export class P2PService {
   /**
    * Iterates over all peers and connections in random order and
    * @returns the first open connection
+   * @throws Error if no open connection is found
    */
   private getNextOpenConnection(): Peer.DataConnection {
     for (const [remotePeerId, connArr] of Object.entries(

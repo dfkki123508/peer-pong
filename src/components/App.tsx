@@ -41,7 +41,8 @@ const App = () => {
       {gameState.step === GAME_STEP.FINISHED && (
         <Result open={gameState.step === GAME_STEP.FINISHED} />
       )}
-      <Debug pixiAppRef={stageRef} /> */}
+      */}
+      <Debug />
     </div>
   );
 };
