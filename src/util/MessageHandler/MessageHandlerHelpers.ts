@@ -27,31 +27,26 @@ export function getHandler(
       return new MovePlayerMessageHandler(
         msg.data as MovePlayerMessageDataType,
         msg.timestampCreated,
-        msg.timestampReceived,
       );
     case MESSAGE_EVENTS.ball_update:
       return new BallUpdateMessageHandler(
         msg.data as BallUpdateMessageDataType,
         msg.timestampCreated,
-        msg.timestampReceived,
       );
     case MESSAGE_EVENTS.start_round:
       return new StartRoundMessageHandler(
         msg.data as StartRoundMessageDataType,
         msg.timestampCreated,
-        msg.timestampReceived,
       );
     case MESSAGE_EVENTS.start_game:
       return new StartGameMessageHandler(
         msg.data as StartGameMessageDataType,
         msg.timestampCreated,
-        msg.timestampReceived,
       );
     case MESSAGE_EVENTS.finish_game:
       return new FinishGameMessageHandler(
         msg.data as FinishGameMessageDataType,
         msg.timestampCreated,
-        msg.timestampReceived,
       );
   }
 }

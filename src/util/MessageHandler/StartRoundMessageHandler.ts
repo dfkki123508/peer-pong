@@ -6,9 +6,8 @@ class StartRoundMessageHandler extends AbstractMessageHandler<StartRoundMessageD
   constructor(
     data: StartRoundMessageDataType,
     timestampCreated: number = Date.now(),
-    timestampReceived?: number,
   ) {
-    super(data, timestampCreated, timestampReceived);
+    super(data, timestampCreated);
     this.event = MESSAGE_EVENTS.start_round;
   }
 
@@ -16,9 +15,10 @@ class StartRoundMessageHandler extends AbstractMessageHandler<StartRoundMessageD
     console.log('Start round received', this.data);
     const game = Game.getInstance();
     if (game) {
+      const delay = Date.now() - this.timestampCreated;
       game.setBallState(this.data.ball);
       game.setScore(this.data.score);
-      game.startRoundTransition();
+      game.startRoundTransition(-delay);
     }
   }
 }

@@ -12,11 +12,11 @@ import {
   remotePlayerStore$,
 } from '../services/GameStore';
 import { Subscription } from 'rxjs';
-import { Remote } from './Remote';
 import { P2PServiceInstance } from '../services/P2PService';
 import FinishGameMessageHandler from '../util/MessageHandler/FinishGameMessageHandler';
 import StartRoundMessageHandler from '../util/MessageHandler/StartRoundMessageHandler';
 import { rand } from '../util/MathHelpers';
+import { Remote } from './Remote';
 
 type GameStateFn = (delta: number) => void;
 

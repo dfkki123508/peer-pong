@@ -6,9 +6,8 @@ class FinishGameMessageHandler extends AbstractMessageHandler<FinishGameMessageD
   constructor(
     data: FinishGameMessageDataType,
     timestampCreated: number = Date.now(),
-    timestampReceived?: number,
   ) {
-    super(data, timestampCreated, timestampReceived);
+    super(data, timestampCreated);
     this.event = MESSAGE_EVENTS.finish_game;
   }
 

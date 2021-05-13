@@ -6,9 +6,8 @@ class MovePlayerMessageHandler extends AbstractMessageHandler<MovePlayerMessageD
   constructor(
     data: MovePlayerMessageDataType,
     timestampCreated: number = Date.now(),
-    timestampReceived?: number,
   ) {
-    super(data, timestampCreated, timestampReceived);
+    super(data, timestampCreated);
     this.event = MESSAGE_EVENTS.move_player;
   }
 

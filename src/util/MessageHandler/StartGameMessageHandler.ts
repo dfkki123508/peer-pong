@@ -6,9 +6,8 @@ class StartGameMessageHandler extends AbstractMessageHandler<StartGameMessageDat
   constructor(
     data: StartGameMessageDataType,
     timestampCreated: number = Date.now(),
-    timestampReceived?: number,
   ) {
-    super(data, timestampCreated, timestampReceived);
+    super(data, timestampCreated);
     this.event = MESSAGE_EVENTS.start_game;
   }
 

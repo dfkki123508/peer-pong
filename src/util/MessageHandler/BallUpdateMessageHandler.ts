@@ -6,9 +6,8 @@ class BallUpdateMessageHandler extends AbstractMessageHandler<BallUpdateMessageD
   constructor(
     data: BallUpdateMessageDataType,
     timestampCreated: number = Date.now(),
-    timestampReceived?: number,
   ) {
-    super(data, timestampCreated, timestampReceived);
+    super(data, timestampCreated);
     this.event = MESSAGE_EVENTS.ball_update;
   }
 
@@ -17,7 +16,7 @@ class BallUpdateMessageHandler extends AbstractMessageHandler<BallUpdateMessageD
     const game = Game.getInstance();
     if (game) {
       // Do some interpolation because of network delay
-      const delay = this.timestampReceived - this.timestampCreated;
+      const delay = Date.now() - this.timestampCreated;
       const mult = delay / (1000.0 / 60.0); // 60 FPS
       this.data.x += this.data.vx * mult;
       this.data.y += this.data.vy * mult;

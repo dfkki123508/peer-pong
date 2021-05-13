@@ -5,10 +5,9 @@ import GameConfig from '../config/GameConfig';
 import { newCollisionStore$, newPlayerStore$ } from '../services/GameStore';
 import { P2PServiceInstance } from '../services/P2PService';
 import { GenericMessage } from '../types/types';
-import AbstractMessageHandler from '../util/MessageHandler/AbstractMessageHandler';
 import BallUpdateMessageHandler from '../util/MessageHandler/BallUpdateMessageHandler';
+import { getHandler } from '../util/MessageHandler/MessageHandlerHelpers';
 import MovePlayerMessageHandler from '../util/MessageHandler/MovePlayerMessageHandler';
-
 import Game from './Game';
 
 export class Remote {
@@ -38,7 +37,7 @@ export class Remote {
         .subscribe((msg) => {
           msg.timestampReceived = Date.now();
           // const delay = msg.timestampReceived - msg.timestampCreated;
-          const messageHandler = AbstractMessageHandler.getHandler(msg);
+          const messageHandler = getHandler(msg);
           if (!messageHandler) {
             console.warn('No message handler found for', msg);
             return;
