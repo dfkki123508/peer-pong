@@ -1,10 +1,8 @@
 import React from 'react';
 import { useP2PService } from '../../services/P2PService';
 import './Debug.scss';
-import { useObservable, useSharedState } from '../../util/UseObservable';
-import { fps$ } from '../../services/GameStore';
-import { throttle } from 'rxjs/operators';
-import { interval } from 'rxjs';
+import Game from '../../controllers/Game';
+import StartGameMessageHandler from '../../util/MessageHandler/StartGameMessageHandler';
 
 const Debug = () => {
   const p2pService = useP2PService();
@@ -12,10 +10,22 @@ const Debug = () => {
   const [show, setShow] = React.useState(true);
   const [inputPeerId, setInputPeerId] = React.useState('');
   const [myId, setMyId] = React.useState(p2pService.me?.id || undefined);
+  const game = Game.getInstance();
 
-  const onClickResetRound = () => {
-    // gameController.resetRound(false, true);
-    // gameController.startRound();
+  React.useEffect(() => {
+    const sub = p2pService.peer$.subscribe((peer) => {
+      console.log('me', peer.id);
+      setMyId(peer.id);
+    });
+    return () => sub.unsubscribe();
+  }, [p2pService.peer$]);
+
+  const onClickResetRound = () => {};
+
+  const onClickStartGame = () => {
+    const msg = new StartGameMessageHandler(game.getBallState());
+    p2pService.sendMessage(msg);
+    game.startRoundTransition();
   };
 
   const onClickSend = () => {
@@ -26,17 +36,11 @@ const Debug = () => {
     p2pService.disconnect();
   };
 
-  React.useEffect(() => {
-    const sub = p2pService.peer$.subscribe((peer) => {
-      console.log('me', peer.id);
-      setMyId(peer.id);
-    });
-    return () => sub.unsubscribe();
-  }, [p2pService.peer$]);
-
   const onClickConnect = () => {
     if (inputPeerId && inputPeerId != '') {
       p2pService.connect(inputPeerId);
+      game.swapPlayersSides();
+      game.master = true;
     } else {
       alert('Invalid peer id:' + inputPeerId);
     }
@@ -68,6 +72,7 @@ const Debug = () => {
             <button onClick={onClickSend}>Send</button>
             <button onClick={onClickResetRound}>Reset Round</button>
             <button onClick={onClickReset}>Reset</button>
+            <button onClick={onClickStartGame}>Start Game</button>
           </div>
           <div>
             Your Id: <span className="code">{myId}</span>{' '}

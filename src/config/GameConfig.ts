@@ -1,6 +1,6 @@
 import { Point, TextStyle } from 'pixi.js';
 import { BallState, GameState, GAME_STEP, PlayerState } from '../types/types';
-import { rand } from '../util/Physics';
+import { rand } from '../util/MathHelpers';
 
 console.log('PROCESS.env:', process.env);
 
@@ -9,6 +9,12 @@ const GameConfig = {
     moveSpeed: 35.0,
     moveAcc: 70.0,
     maxMoveSpeed: 100,
+    local: {
+      id: 'local-player',
+    },
+    remote: {
+      id: 'remote-player',
+    },
   },
   ball: {
     width: 20,

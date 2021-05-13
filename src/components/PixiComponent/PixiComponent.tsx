@@ -1,15 +1,15 @@
 import React from 'react';
-import * as PIXI from 'pixi.js';
-import Sketch from '../../controllers/Sketch';
-import { PixiApplicationOptions } from '../../types/types';
+import Game from '../../controllers/Game';
 
-// type PixiComponentProps = PixiApplicationOptions;
+type PixiComponentProps = {
+  className: string;
+};
 
-const PixiComponent = (): JSX.Element => {
+const PixiComponent = (props: PixiComponentProps): JSX.Element => {
   const wrapperRef = React.createRef<HTMLDivElement>();
 
   React.useEffect(() => {
-    const sketch = Sketch.getInstance();
+    const sketch = Game.getInstance();
 
     let canvas: HTMLCanvasElement;
     if (wrapperRef && wrapperRef.current) {
@@ -24,7 +24,7 @@ const PixiComponent = (): JSX.Element => {
     };
   }, [wrapperRef]);
 
-  return <div ref={wrapperRef} />;
+  return <div ref={wrapperRef} {...props} />;
 };
 
 export default PixiComponent;

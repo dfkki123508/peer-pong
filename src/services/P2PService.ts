@@ -72,9 +72,8 @@ export class P2PService {
   /**
    * Iterates over all peers and connections in random order and
    * @returns the first open connection
-   * @throws Error if no open connection is found
    */
-  private getNextOpenConnection(): Peer.DataConnection {
+  getNextOpenConnection(): Peer.DataConnection | undefined {
     for (const [remotePeerId, connArr] of Object.entries(
       this.me.connections as { string: Array<Peer.DataConnection> },
     )) {
@@ -84,7 +83,7 @@ export class P2PService {
         }
       }
     }
-    throw new Error('No open connection!');
+    return;
   }
 
   sendMessage(msg: string | unknown, conn?: Peer.DataConnection): void {
@@ -95,6 +94,10 @@ export class P2PService {
     // Use first data connection, if none specified
     if (!conn) {
       conn = this.getNextOpenConnection();
+    }
+
+    if (!conn) {
+      throw new Error('No open connection!');
     }
 
     // console.log('Sending msg over connection:', msg, conn);

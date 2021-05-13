@@ -5,11 +5,18 @@ import GameConfig from '../config/GameConfig';
 import { getPlayerIndexAfterScore } from '../util/GameHelpers';
 import Keyboard from './Keyboard';
 import Background from './Background';
-import { Collision, PixiApplicationOptions } from '../types/types';
-// import RemoteAction from '../util/RemoteAction';
-import { newCollisionStore$, newPlayerStore$, remotePlayerStore$ } from '../services/GameStore';
+import { Collision, GAME_STATE, NewBallState, Score } from '../types/types';
+import {
+  newCollisionStore$,
+  newPlayerStore$,
+  remotePlayerStore$,
+} from '../services/GameStore';
 import { Subscription } from 'rxjs';
-import { RemoteController } from './RemoteController';
+import { Remote } from './Remote';
+import { P2PServiceInstance } from '../services/P2PService';
+import FinishGameMessageHandler from '../util/MessageHandler/FinishGameMessageHandler';
+import StartRoundMessageHandler from '../util/MessageHandler/StartRoundMessageHandler';
+import { rand } from '../util/MathHelpers';
 
 type GameStateFn = (delta: number) => void;
 
@@ -18,8 +25,8 @@ type Ball = PIXI.Sprite & {
   vy: number;
 };
 
-export default class Sketch {
-  private static instance: Sketch | undefined;
+export default class Game {
+  private static instance: Game | undefined;
 
   app: PIXI.Application;
   player1: PIXI.Sprite;
@@ -28,16 +35,23 @@ export default class Sketch {
   border: PIXI.Graphics;
   scoreText: PIXI.Text;
   countDown: PIXI.Text;
-  gameState: GameStateFn | undefined;
+  state: GameStateFn | undefined;
   keyObject: Keyboard;
   background: Background;
   stopped = false;
-  score = [0, 0];
+  score: Score = [0, 0];
   countDownStartTime = -1;
   countDownTime = -1;
 
-  remoteController = RemoteController.getInstance();
+  master = false;
+  remoteController: Remote = new Remote(this);
   subs: Array<Subscription> = [];
+
+  GAME_STATE_FN_MAPPING = {
+    [GAME_STATE.pause]: undefined,
+    [GAME_STATE.play]: this.play,
+    [GAME_STATE.start_round]: this.startRoundState,
+  };
 
   private constructor() {
     this.app = new PIXI.Application({
@@ -70,9 +84,10 @@ export default class Sketch {
     this.player2.anchor.set(0.5);
     this.player1.x = GameConfig.screen.padding;
     this.player2.x = this.app.view.width - GameConfig.screen.padding;
+    this.player1.name = GameConfig.player.local.id;
+    this.player2.name = GameConfig.player.remote.id;
     this.subs.push(newPlayerStore$.addObserver(this.player1, 'y'));
     this.subs.push(remotePlayerStore$.addObserver(this.player2, 'y'));
-
     this.player1.interactive = this.player2.interactive = true;
     this.player1.on('mousemove', (event: PIXI.InteractionEvent) =>
       this.onMouseMove(this.player1, event),
@@ -124,7 +139,7 @@ export default class Sketch {
     };
 
     // set state
-    this.gameState = this.startRoundTransition;
+    this.setState(GAME_STATE.pause);
 
     // debug
     // this.app.stop();
@@ -139,11 +154,11 @@ export default class Sketch {
     console.log('border', this.border);
   }
 
-  static getInstance(): Sketch {
-    if (!Sketch.instance) {
-      Sketch.instance = new Sketch();
+  static getInstance(): Game {
+    if (!Game.instance) {
+      Game.instance = new Game();
     }
-    return Sketch.instance;
+    return Game.instance;
   }
 
   // Interaction
@@ -154,22 +169,20 @@ export default class Sketch {
       newPosition.y > 0 &&
       newPosition.y < this.app.view.height
     ) {
-      newPlayerStore$.next(newPosition.y);
+      newPlayerStore$.next({ y: newPosition.y });
       // sprite.y = newPosition.y;
     }
   }
 
   // Game states
   play(delta: number): void {
-    // updateBall();
-
     this.ball.x += this.ball.vx;
     this.ball.y += this.ball.vy;
 
     const collision = this.collisionDetection();
     if (collision) {
-      newCollisionStore$.next(collision);
       this.collisionResponse(collision);
+      newCollisionStore$.next(collision);
     }
   }
 
@@ -195,27 +208,43 @@ export default class Sketch {
    */
   startRoundTransition(offset = 0): void {
     this.resetCountdown(offset);
-    this.gameState = this.startRoundState;
+    this.setState(GAME_STATE.start_round);
   }
 
   startGameTransition(): void {
-    this.gameState = this.play;
+    this.setState(GAME_STATE.play);
   }
 
   finishGameTransition(): void {
-    this.gameState = undefined;
+    this.setState(GAME_STATE.pause);
   }
 
-  // @RemoteAction
   scoreTransition(): void {
     this.background.triggerWarp(700);
-    this.calcScore();
+    const scoreIdx = this.calcScore();
     this.resetBall();
     if (Math.max(...this.score) >= 2) {
+      if (this.isLocalPlayerScoreIdx(scoreIdx)) {
+        const msg = new FinishGameMessageHandler(this.score);
+        P2PServiceInstance.sendMessage(msg);
+      }
       this.finishGameTransition();
     } else {
+      // TODO: make better check to definitly decide between local and remote player
+      if (this.isLocalPlayerScoreIdx(scoreIdx)) {
+        const data = { score: this.score, ball: this.getBallState() };
+        const msg = new StartRoundMessageHandler(data);
+        P2PServiceInstance.sendMessage(msg);
+      }
       this.startRoundTransition();
     }
+  }
+
+  isLocalPlayerScoreIdx(scoreIdx: number): boolean {
+    return (
+      (scoreIdx === 0 && this.player1.x < GameConfig.screen.width / 2) ||
+      (scoreIdx === 1 && this.player1.x > GameConfig.screen.width / 2)
+    );
   }
 
   // Collision Detection and Response
@@ -281,11 +310,6 @@ export default class Sketch {
     }
     // Local player
     else if (collisionObject === this.player1) {
-      // this.p2pService.sendMessage({
-      //   event: MESSAGE_EVENTS.ball_update,
-      //   data: newState,
-      // });
-
       anime({
         targets: this.player1,
         x: this.player1.x - 15,
@@ -318,8 +342,8 @@ export default class Sketch {
   resetBall(): void {
     this.ball.x = this.app.view.width / 2;
     this.ball.y = this.app.view.height / 2;
-    this.ball.vx = 2.2;
-    this.ball.vy = 1.1;
+    this.ball.vx = rand(2.0, 5.0) * (Math.random() < 0.5 ? -1 : 1);
+    this.ball.vy = rand(-2.0, 2.0);
   }
 
   resetCountdown(offset = 0): void {
@@ -328,10 +352,11 @@ export default class Sketch {
     this.countDown.visible = true;
   }
 
-  calcScore(): void {
+  calcScore(): number {
     const scoreIdx = getPlayerIndexAfterScore(this.ball);
     this.score[scoreIdx]++;
     this.scoreText.text = this.getScoreText();
+    return scoreIdx;
   }
 
   getScoreText(): string {
@@ -345,18 +370,52 @@ export default class Sketch {
   }
 
   gameLoop(delta: number): void {
-    if (this.gameState) {
-      this.gameState(delta);
+    if (this.state) {
+      this.state(delta);
     }
   }
 
-  // Should be called upon destruction
+  // Getter & setter
+  getBallState(): NewBallState {
+    const { x, y, vx, vy } = this.ball;
+    return { x, y, vx, vy };
+  }
+
+  setBallState(state: NewBallState): void {
+    for (const [key, value] of Object.entries(state)) {
+      this.ball[key] = value;
+    }
+  }
+
+  setScore(score: Score): void {
+    this.score = score;
+    this.scoreText.text = this.getScoreText();
+  }
+
+  getScore(): Score {
+    return this.score;
+  }
+
+  getState(): GAME_STATE | undefined {
+    for (const [key, value] of Object.entries(this.GAME_STATE_FN_MAPPING)) {
+      if (value === this.state) {
+        return +key;
+      }
+    }
+  }
+
+  setState(state: GAME_STATE): void {
+    const newState = this.GAME_STATE_FN_MAPPING[state];
+    this.state = newState; // can be undefined
+  }
+
+  // Destruction
   destroy(): void {
     console.log('Cleaning up!');
     this.remoteController.destroy();
     this.subs.forEach((s) => s.unsubscribe());
     this.app.destroy();
     this.keyObject.unsubscribe();
-    Sketch.instance = undefined;
+    Game.instance = undefined;
   }
 }

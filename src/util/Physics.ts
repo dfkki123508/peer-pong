@@ -72,10 +72,6 @@ export function reflectWithin(
   return acceleration;
 }
 
-export function rand(min: number, max: number): number {
-  return Math.random() * (max - min) + min;
-}
-
 const collisionResponse = (vec: PIXI.Point, angularInfcluence = 0) => {
   let newVec = reflectVector(new Point(1, 0), vec); // reflect by normal
   newVec = multScalar(newVec, GameConfig.ball.speedUp); // Speed up

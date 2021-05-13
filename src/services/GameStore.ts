@@ -1,21 +1,45 @@
 import { BehaviorSubject, interval, Subject, Subscription } from 'rxjs';
-import { throttle } from 'rxjs/operators';
+import { distinctUntilChanged, map, throttle } from 'rxjs/operators';
 import GameConfig, {
   getInitialBallState,
   getInitialGameState,
   getInitialPlayerState,
 } from '../config/GameConfig';
-import { Collision } from '../types/types';
+import { Collision, NewPlayerState } from '../types/types';
 import { Timer } from '../util/Timer';
 
-export class UpdateSubject<T> extends BehaviorSubject<T> {
+export class UpdateSubject<
+  T extends { [key: string]: any }
+> extends BehaviorSubject<T> {
   update(fn: (oldState: T) => T): void {
     const newState = fn(this.getValue());
     this.next(newState);
   }
 
-  addObserver<U, K extends keyof U>(obj: U, key: K): Subscription {
-    return this.subscribe((v) => (obj[key] = v));
+  addObserver<U extends T, K extends keyof T>(
+    obj: U,
+    ...keys: K[]
+  ): Subscription {
+    // If no keys selected, use all keys from current object
+    if (!keys || keys.length === 0) {
+      keys = Object.keys(this.getValue());
+    }
+    return (
+      this
+        // .pipe(
+        // map((v) =>
+        //   Object.fromEntries(
+        //     Object.entries(v).filter(([key]) => (keys as string[]).includes(key)),
+        //   ),
+        // ),
+        // distinctUntilChanged(),
+        // )
+        .subscribe((v) => {
+          for (const key of keys) {
+            obj[key] = v[key];
+          }
+        })
+    );
   }
 }
 
@@ -28,17 +52,13 @@ export const countdownTimer = new Timer(GameConfig.game.countdownLength);
 export const fps$ = new UpdateSubject<number>(0);
 export const ballProjection$ = new UpdateSubject<Array<PIXI.Point>>([]);
 
-export const newPlayerStore$ = new UpdateSubject<number>(
-  GameConfig.screen.height / 2,
-);
+export const newPlayerStore$ = new UpdateSubject<NewPlayerState>({
+  y: GameConfig.screen.height / 2,
+});
 
-export const remotePlayerStore$ = new UpdateSubject<number>(
-  GameConfig.screen.height / 2,
-);
+export const remotePlayerStore$ = new UpdateSubject<NewPlayerState>({
+  y: GameConfig.screen.height / 2,
+});
 
-export const newCollisionStore$ = new UpdateSubject<Collision | undefined>(
-  undefined,
-);
+export const newCollisionStore$ = new UpdateSubject<Collision>(undefined);
 
-// Debug
-newCollisionStore$.pipe().subscribe((v) => console.log('Collisionstream:', v));

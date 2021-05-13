@@ -40,6 +40,7 @@ export enum MESSAGE_EVENTS {
   'ball_update',
   'start_round',
   'reset_round',
+  'finish_game',
 }
 
 export enum DEBUG_COMMANDS {
@@ -71,4 +72,39 @@ export type PixiApplicationOptions = {
   resizeTo?: Window | HTMLElement;
 };
 
+export enum GAME_STATE {
+  'play',
+  'start_round',
+  'pause',
+}
+
 export type Collision = PIXI.Sprite | 'top' | 'bottom' | 'left' | 'right';
+
+export type Score = [number, number];
+
+export type NewPlayerState = {
+  y: number;
+};
+
+export type NewBallState = {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+};
+
+export type GenericMessage<T = unknown> = {
+  event: MESSAGE_EVENTS;
+  data: T;
+  timestampCreated: number;
+  timestampReceived?: number;
+};
+
+export type MovePlayerMessageDataType = NewPlayerState;
+export type BallUpdateMessageDataType = NewBallState;
+export type StartRoundMessageDataType = {
+  score: Score;
+  ball: NewBallState;
+};
+export type StartGameMessageDataType = NewBallState;
+export type FinishGameMessageDataType = Score;

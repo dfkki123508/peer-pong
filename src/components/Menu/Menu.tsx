@@ -3,7 +3,7 @@ import './Menu.scss';
 import { useP2PService } from '../../services/P2PService';
 import QRCode from 'qrcode.react';
 import MenuWrapper from '../MenuWrapper/MenuWrapper';
-import { GameController } from '../../controllers/GameController';
+import Game from '../../controllers/Game';
 
 type MenuPropsType = {
   open: boolean;
@@ -11,7 +11,8 @@ type MenuPropsType = {
 
 const Menu = ({ open }: MenuPropsType): JSX.Element => {
   const p2pService = useP2PService();
-  const gameController = GameController.getInstance();
+  // const gameController = GameController.getInstance();
+  const game = Game.getInstance();
   const [inputPeerId, setInputPeerId] = React.useState('');
   const [myId, setMyId] = React.useState(p2pService.me?.id || undefined);
 
@@ -25,7 +26,9 @@ const Menu = ({ open }: MenuPropsType): JSX.Element => {
 
   const onClickConnect = () => {
     if (inputPeerId && inputPeerId != '') {
-      gameController.connectToRemote(inputPeerId);
+      p2pService.connect(inputPeerId);
+      game.swapPlayersSides();
+      game.master = true;
     } else {
       alert('Invalid peer id:' + inputPeerId);
     }
