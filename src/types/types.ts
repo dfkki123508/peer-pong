@@ -97,7 +97,6 @@ export type GenericMessage<T = unknown> = {
   event: MESSAGE_EVENTS;
   data: T;
   timestampCreated: number;
-  timestampReceived?: number;
 };
 
 export type MovePlayerMessageDataType = NewPlayerState;

@@ -7,6 +7,7 @@ import {
   StartGameMessageDataType,
   FinishGameMessageDataType,
 } from '../../types/types';
+import AbstractMessageHandler from './AbstractMessageHandler';
 import BallUpdateMessageHandler from './BallUpdateMessageHandler';
 import FinishGameMessageHandler from './FinishGameMessageHandler';
 import MovePlayerMessageHandler from './MovePlayerMessageHandler';
@@ -15,13 +16,7 @@ import StartRoundMessageHandler from './StartRoundMessageHandler';
 
 export function getHandler(
   msg: GenericMessage,
-):
-  | MovePlayerMessageHandler
-  | BallUpdateMessageHandler
-  | StartRoundMessageHandler
-  | StartGameMessageHandler
-  | FinishGameMessageHandler
-  | undefined {
+): AbstractMessageHandler | undefined {
   switch (msg.event) {
     case MESSAGE_EVENTS.move_player:
       return new MovePlayerMessageHandler(

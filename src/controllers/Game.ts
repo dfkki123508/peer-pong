@@ -6,17 +6,14 @@ import { getPlayerIndexAfterScore } from '../util/GameHelpers';
 import Keyboard from './Keyboard';
 import Background from './Background';
 import { Collision, GAME_STATE, NewBallState, Score } from '../types/types';
-import {
-  newCollisionStore$,
-  newPlayerStore$,
-  remotePlayerStore$,
-} from '../services/GameStore';
-import { Subscription } from 'rxjs';
-import { P2PServiceInstance } from '../services/P2PService';
-import FinishGameMessageHandler from '../util/MessageHandler/FinishGameMessageHandler';
-import StartRoundMessageHandler from '../util/MessageHandler/StartRoundMessageHandler';
 import { rand } from '../util/MathHelpers';
-import { Remote } from './Remote';
+import {
+  Remote,
+  sendBallUpdate,
+  sendFinishGame,
+  sendMovePlayer,
+  sendStartRound,
+} from './Remote';
 
 type GameStateFn = (delta: number) => void;
 
@@ -45,7 +42,6 @@ export default class Game {
 
   master = false;
   remoteController: Remote = new Remote(this);
-  subs: Array<Subscription> = [];
 
   GAME_STATE_FN_MAPPING = {
     [GAME_STATE.pause]: undefined,
@@ -86,15 +82,13 @@ export default class Game {
     this.player2.x = this.app.view.width - GameConfig.screen.padding;
     this.player1.name = GameConfig.player.local.id;
     this.player2.name = GameConfig.player.remote.id;
-    this.subs.push(newPlayerStore$.addObserver(this.player1, 'y'));
-    this.subs.push(remotePlayerStore$.addObserver(this.player2, 'y'));
-    this.player1.interactive = this.player2.interactive = true;
+    this.player1.interactive = true;
     this.player1.on('mousemove', (event: PIXI.InteractionEvent) =>
       this.onMouseMove(this.player1, event),
     );
-    this.player2.on('mousemove', (event: PIXI.InteractionEvent) =>
-      this.onMouseMove(this.player2, event),
-    );
+    // this.player2.on('mousemove', (event: PIXI.InteractionEvent) =>
+    //   this.onMouseMove(this.player2, event),
+    // );
 
     this.app.stage.addChild(this.player1, this.player2);
 
@@ -169,8 +163,8 @@ export default class Game {
       newPosition.y > 0 &&
       newPosition.y < this.app.view.height
     ) {
-      newPlayerStore$.next({ y: newPosition.y });
-      // sprite.y = newPosition.y;
+      sendMovePlayer({ y: newPosition.y });
+      sprite.y = newPosition.y;
     }
   }
 
@@ -182,7 +176,7 @@ export default class Game {
     const collision = this.collisionDetection();
     if (collision) {
       this.collisionResponse(collision);
-      newCollisionStore$.next(collision);
+      sendBallUpdate(this.getBallState());
     }
   }
 
@@ -207,6 +201,7 @@ export default class Game {
    * @param offset Shorten or lengthen the timer by @param offset millisecons
    */
   startRoundTransition(offset = 0): void {
+    this.background.triggerWarp(700);
     this.resetCountdown(offset);
     this.setState(GAME_STATE.start_round);
   }
@@ -216,25 +211,21 @@ export default class Game {
   }
 
   finishGameTransition(): void {
+    this.background.triggerWarp(700);
     this.setState(GAME_STATE.pause);
   }
 
   scoreTransition(): void {
-    this.background.triggerWarp(700);
     const scoreIdx = this.calcScore();
     this.resetBall();
     if (Math.max(...this.score) >= 2) {
       if (this.isLocalPlayerScoreIdx(scoreIdx)) {
-        const msg = new FinishGameMessageHandler(this.score);
-        P2PServiceInstance.sendMessage(msg);
+        sendFinishGame(this.score);
       }
       this.finishGameTransition();
     } else {
-      // TODO: make better check to definitly decide between local and remote player
       if (this.isLocalPlayerScoreIdx(scoreIdx)) {
-        const data = { score: this.score, ball: this.getBallState() };
-        const msg = new StartRoundMessageHandler(data);
-        P2PServiceInstance.sendMessage(msg);
+        sendStartRound({ score: this.score, ball: this.getBallState() });
       }
       this.startRoundTransition();
     }

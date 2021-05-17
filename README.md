@@ -25,6 +25,7 @@
     * ideas:
 	* use the calculation of a collision with a player from there where the player is local -> remote player simulates collision but receives authoritive update and has to correct the state
 	* 
+- Put it on itch.io
 
 # Steps
 1. Enter connection string of peer -> connect
