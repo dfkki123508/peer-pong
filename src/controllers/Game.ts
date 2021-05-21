@@ -1,5 +1,5 @@
 import * as PIXI from 'pixi.js';
-import anime from 'animejs/lib/anime.es.js';
+import anime from 'animejs';
 import { testForAABB } from '../util/Physics';
 import GameConfig from '../config/GameConfig';
 import { getPlayerIndexAfterScore } from '../util/GameHelpers';
@@ -45,6 +45,10 @@ export default class Game {
   countDownStartTime = -1;
   countDownTime = -1;
 
+  player1Hitarea!: PIXI.Graphics;
+  dragData: PIXI.InteractionData | undefined;
+  dragging = false;
+
   master = false;
 
   GAME_STATE_FN_MAPPING = {
@@ -77,21 +81,44 @@ export default class Game {
 
     // players
     this.player1 = new PIXI.Sprite(PIXI.Texture.WHITE);
-    this.player1.tint = 0x123456;
     this.player2 = new PIXI.Sprite(PIXI.Texture.WHITE);
-    this.player1.height = this.player2.height = 120;
+    this.player1.tint = 0x123456;
+    this.player1.width = this.player2.width = GameConfig.player.width;
+    this.player1.height = this.player2.height = GameConfig.player.height;
     this.player1.anchor.set(0.5);
     this.player2.anchor.set(0.5);
     this.resetPlayerPositions();
+    this.initPlayer1Hitarea();
     this.player1.name = GameConfig.player.local.id;
     this.player2.name = GameConfig.player.remote.id;
     this.player1.interactive = true;
     this.player1.on('mousemove', (event: PIXI.InteractionEvent) =>
       this.onMouseMove(this.player1, event),
     );
-    // this.player2.on('mousemove', (event: PIXI.InteractionEvent) =>
-    //   this.onMouseMove(this.player2, event),
-    // );
+    this.player1.on('touchstart', (event: PIXI.InteractionEvent) => {
+      this.player1.alpha = 0.5;
+      this.dragData = event.data;
+      this.dragging = true;
+      event.stopPropagation();
+    });
+    this.player1.on('touchmove', () => {
+      if (this.dragData && this.dragging && !this.stopped) {
+        const newPosition = this.dragData.getLocalPosition(this.player1.parent);
+
+        if (newPosition.y > 0 && newPosition.y < this.app.view.height) {
+          sendMovePlayer({ y: newPosition.y });
+          this.player1.y = newPosition.y;
+        }
+      }
+    });
+    const touchend = () => {
+      console.log('touchend');
+      this.player1.alpha = 1.0;
+      this.dragData = undefined;
+      this.dragging = false;
+    };
+    this.player1.on('touchend', touchend);
+    this.player1.on('touchendoutside', touchend);
 
     this.app.stage.addChild(this.player1, this.player2);
 
@@ -169,6 +196,23 @@ export default class Game {
       sendMovePlayer({ y: newPosition.y });
       sprite.y = newPosition.y;
     }
+  }
+
+  private initPlayer1Hitarea(): void {
+    const hitarea = new PIXI.Graphics();
+    hitarea.lineStyle(1, 0xfeeb77, 1);
+    hitarea.drawRect(
+      -(
+        GameConfig.player.width / 2 +
+        (this.player1.x < GameConfig.screen.width / 2 ? 0 : 30)
+      ),
+      -(GameConfig.player.height / 4) / 2,
+      GameConfig.player.width + 30,
+      GameConfig.player.height / 4,
+    );
+    hitarea.endFill();
+    this.player1Hitarea = hitarea;
+    this.player1.hitArea = this.player1Hitarea.getBounds();
   }
 
   // Game states
@@ -362,7 +406,7 @@ export default class Game {
 
   resetPlayerPositions(): void {
     this.player1.x = GameConfig.screen.padding;
-    this.player2.x = this.app.view.width - GameConfig.screen.padding;
+    this.player2.x = GameConfig.screen.width - GameConfig.screen.padding;
     this.player1.y = this.player2.y = this.app.view.height / 2;
   }
 
@@ -387,6 +431,7 @@ export default class Game {
     const copyX = this.player1.x;
     this.player1.x = this.player2.x;
     this.player2.x = copyX;
+    this.initPlayer1Hitarea();
   }
 
   gameLoop(delta: number): void {

@@ -6,6 +6,8 @@ console.log('PROCESS.env:', process.env);
 
 const GameConfig = {
   player: {
+    width: 20,
+    height: 120,
     moveSpeed: 35.0,
     moveAcc: 70.0,
     maxMoveSpeed: 100,

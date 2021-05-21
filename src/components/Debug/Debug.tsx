@@ -3,6 +3,7 @@ import './Debug.scss';
 import Game from '../../controllers/Game';
 import StartGameMessageHandler from '../../util/MessageHandler/StartGameMessageHandler';
 import P2PService from '../../services/P2PService';
+import { launchIntoFullscreen, mobileCheck } from '../../util/UiHelpers';
 
 const Debug = () => {
   const p2pService = P2PService.getInstance();
@@ -40,6 +41,9 @@ const Debug = () => {
         await p2pService.connect(inputPeerId);
         game.swapPlayersSides();
         game.master = true;
+        if (mobileCheck()) {
+          launchIntoFullscreen();
+        }
       } catch (err) {
         console.error(err);
       }
@@ -50,6 +54,14 @@ const Debug = () => {
 
   const onClickDisconnect = () => {
     p2pService.disconnect();
+  };
+
+  const onClickswapPlayersSides = () => {
+    game.swapPlayersSides();
+  };
+
+  const onClickFullscreen = () => {
+    launchIntoFullscreen();
   };
 
   const onClickCopy = () => {
@@ -74,6 +86,8 @@ const Debug = () => {
             <button onClick={onClickSend}>Send</button>
             <button onClick={onClickResetGame}>Reset Game</button>
             <button onClick={onClickStartGame}>Start Game</button>
+            <button onClick={onClickswapPlayersSides}>Swap sides</button>
+            <button onClick={onClickFullscreen}>Fullscreen</button>
           </div>
           <div>
             Your Id: <span className="code">{myId}</span>{' '}
