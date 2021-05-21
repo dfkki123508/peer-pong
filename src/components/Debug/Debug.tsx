@@ -1,9 +1,11 @@
 import React from 'react';
 import './Debug.scss';
 import Game from '../../controllers/Game';
+import QRCode from 'qrcode.react';
 import StartGameMessageHandler from '../../util/MessageHandler/StartGameMessageHandler';
 import P2PService from '../../services/P2PService';
 import { launchIntoFullscreen, mobileCheck } from '../../util/UiHelpers';
+import Button from '../Button/Button';
 
 const Debug = () => {
   const p2pService = P2PService.getInstance();
@@ -11,6 +13,7 @@ const Debug = () => {
   const [show, setShow] = React.useState(true);
   const [inputPeerId, setInputPeerId] = React.useState('');
   const [myId, setMyId] = React.useState(p2pService.me?.id || undefined);
+  const [connected, setConnected] = React.useState(false);
   const game = Game.getInstance();
 
   React.useEffect(() => {
@@ -39,6 +42,7 @@ const Debug = () => {
     if (inputPeerId && inputPeerId != '') {
       try {
         await p2pService.connect(inputPeerId);
+        setConnected(true);
         game.swapPlayersSides();
         game.master = true;
         if (mobileCheck()) {
@@ -54,6 +58,7 @@ const Debug = () => {
 
   const onClickDisconnect = () => {
     p2pService.disconnect();
+    setConnected(false);
   };
 
   const onClickswapPlayersSides = () => {
@@ -64,6 +69,10 @@ const Debug = () => {
     launchIntoFullscreen();
   };
 
+  const onClickTriggerAnimation = () => {
+    game.triggerAnimation();
+  };
+
   const onClickCopy = () => {
     if (myId) {
       navigator.clipboard.writeText(myId);
@@ -72,37 +81,64 @@ const Debug = () => {
 
   return (
     <div className="upper-right">
-      <button className="flex-end" onClick={() => setShow(!show)}>
+      {/* <button className="flex-end" onClick={() => setShow(!show)}>
         Show
-      </button>
+      </button> */}
       {show && (
-        <div>
-          <div>
-            <input
-              type="text"
-              value={message}
-              onChange={(event) => setMessage(event.target.value)}
-            />
-            <button onClick={onClickSend}>Send</button>
-            <button onClick={onClickResetGame}>Reset Game</button>
-            <button onClick={onClickStartGame}>Start Game</button>
-            <button onClick={onClickswapPlayersSides}>Swap sides</button>
-            <button onClick={onClickFullscreen}>Fullscreen</button>
-          </div>
-          <div>
-            Your Id: <span className="code">{myId}</span>{' '}
-            <button onClick={onClickCopy}>Copy!</button> and send to Player2 or
-          </div>
-          <div>
-            <label>Enter</label>
-            <input
-              type="text"
-              placeholder="<Player2 id>"
-              value={inputPeerId}
-              onChange={(event) => setInputPeerId(event.target.value)}
-            />
-            <button onClick={onClickConnect}>Connect</button>
-            <button onClick={onClickDisconnect}>Disconnect</button>
+        <div className="container">
+          <div className="shape">
+            <div>
+              <input
+                type="text"
+                value={message}
+                onChange={(event) => setMessage(event.target.value)}
+              />
+              <Button onClick={onClickSend} disabled={!connected}>
+                Send
+              </Button>
+              <Button onClick={onClickResetGame}>Reset Game</Button>
+              <Button onClick={onClickStartGame} disabled={!connected}>
+                Start Game
+              </Button>
+              <Button onClick={onClickswapPlayersSides} disabled={!connected}>
+                Swap sides
+              </Button>
+              <Button onClick={onClickFullscreen} disabled={!connected}>
+                Fullscreen
+              </Button>
+              <Button onClick={onClickTriggerAnimation}>Animate</Button>
+            </div>
+            <div>
+              Your Id: <span className="code">{myId}</span>{' '}
+              <Button onClick={onClickCopy}>Copy!</Button> and send to Player2
+              or
+            </div>
+            <div>
+              <label>Enter</label>
+              <input
+                type="text"
+                placeholder="<Player2 id>"
+                value={inputPeerId}
+                onChange={(event) => setInputPeerId(event.target.value)}
+              />
+              <Button onClick={onClickConnect} disabled={!myId}>
+                Connect
+              </Button>
+              <Button onClick={onClickDisconnect} disabled={!connected}>
+                Disconnect
+              </Button>
+            </div>
+            <div className="qrcode">
+              {myId ? (
+                <QRCode
+                  value={`${process.env.BASE_URL}/#connectTo=${myId}`}
+                  renderAs={'svg'}
+                  includeMargin
+                />
+              ) : (
+                ''
+              )}
+            </div>
           </div>
         </div>
       )}

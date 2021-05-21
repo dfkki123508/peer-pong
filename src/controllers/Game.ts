@@ -1,5 +1,6 @@
 import * as PIXI from 'pixi.js';
 import anime from 'animejs';
+import { MotionBlurFilter } from '@pixi/filter-motion-blur';
 import { testForAABB } from '../util/Physics';
 import GameConfig from '../config/GameConfig';
 import { getPlayerIndexAfterScore } from '../util/GameHelpers';
@@ -383,6 +384,39 @@ export default class Game {
       this.ball.vx *= -GameConfig.ball.speedUp;
       this.ball.vy *= GameConfig.ball.speedUp;
     }
+  }
+
+  triggerAnimation() {
+    const duration = 2000;
+    const blurFilter = new MotionBlurFilter([0, 0], 5);
+    this.app.stage.filters = [blurFilter];
+    const borderDisplacement = 10;
+    const animation = anime({
+      targets: this.border,
+      x: this.border.x - borderDisplacement,
+      y: this.border.y - borderDisplacement,
+      width: this.border.width + borderDisplacement * 2,
+      height: this.border.height + borderDisplacement * 2,
+      direction: 'alternate',
+      easing: 'linear',
+      duration: duration + 50,
+      autoplay: false,
+    });
+    anime({
+      targets: blurFilter.velocity,
+      x: 40,
+      y: 10,
+      direction: 'alternate',
+      easing: 'linear',
+      duration: duration,
+      autoplay: true,
+    });
+    animation.restart();
+    this.background.triggerWarp(duration);
+    // const t = setTimeout(() => {
+    //   this.app.stage.filters = [];
+    //   clearTimeout(t);
+    // }, duration + 50);
   }
 
   // Other functions
