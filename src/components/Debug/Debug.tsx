@@ -1,11 +1,11 @@
 import React from 'react';
-import { useP2PService } from '../../services/P2PService';
 import './Debug.scss';
 import Game from '../../controllers/Game';
 import StartGameMessageHandler from '../../util/MessageHandler/StartGameMessageHandler';
+import P2PService from '../../services/P2PService';
 
 const Debug = () => {
-  const p2pService = useP2PService();
+  const p2pService = P2PService.getInstance();
   const [message, setMessage] = React.useState('');
   const [show, setShow] = React.useState(true);
   const [inputPeerId, setInputPeerId] = React.useState('');
@@ -13,34 +13,36 @@ const Debug = () => {
   const game = Game.getInstance();
 
   React.useEffect(() => {
-    const sub = p2pService.peer$.subscribe((peer) => {
-      console.log('me', peer.id);
-      setMyId(peer.id);
+    const removeCallback = p2pService.registerCallback('open', (peerId) => {
+      console.log('me', peerId);
+      setMyId(peerId);
     });
-    return () => sub.unsubscribe();
-  }, [p2pService.peer$]);
-
-  const onClickResetRound = () => {};
+    return () => removeCallback();
+  }, [p2pService]);
 
   const onClickStartGame = () => {
+    game.startGameTransition();
     const msg = new StartGameMessageHandler(game.getBallState());
     p2pService.sendMessage(msg);
-    game.startRoundTransition();
   };
 
   const onClickSend = () => {
     p2pService.sendMessage(message);
   };
 
-  const onClickReset = () => {
-    p2pService.disconnect();
+  const onClickResetGame = () => {
+    game.resetGame();
   };
 
-  const onClickConnect = () => {
+  const onClickConnect = async () => {
     if (inputPeerId && inputPeerId != '') {
-      p2pService.connect(inputPeerId);
-      game.swapPlayersSides();
-      game.master = true;
+      try {
+        await p2pService.connect(inputPeerId);
+        game.swapPlayersSides();
+        game.master = true;
+      } catch (err) {
+        console.error(err);
+      }
     } else {
       alert('Invalid peer id:' + inputPeerId);
     }
@@ -70,8 +72,7 @@ const Debug = () => {
               onChange={(event) => setMessage(event.target.value)}
             />
             <button onClick={onClickSend}>Send</button>
-            <button onClick={onClickResetRound}>Reset Round</button>
-            <button onClick={onClickReset}>Reset</button>
+            <button onClick={onClickResetGame}>Reset Game</button>
             <button onClick={onClickStartGame}>Start Game</button>
           </div>
           <div>

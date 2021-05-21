@@ -1,34 +1,37 @@
 import React from 'react';
 import './Menu.scss';
-import { useP2PService } from '../../services/P2PService';
 import QRCode from 'qrcode.react';
 import MenuWrapper from '../MenuWrapper/MenuWrapper';
 import Game from '../../controllers/Game';
+import P2PService from '../../services/P2PService';
 
 type MenuPropsType = {
   open: boolean;
 };
 
 const Menu = ({ open }: MenuPropsType): JSX.Element => {
-  const p2pService = useP2PService();
-  // const gameController = GameController.getInstance();
   const game = Game.getInstance();
+  const p2pService = P2PService.getInstance();
   const [inputPeerId, setInputPeerId] = React.useState('');
   const [myId, setMyId] = React.useState(p2pService.me?.id || undefined);
 
   React.useEffect(() => {
-    const sub = p2pService.peer$.subscribe((peer) => {
-      console.log('me', peer.id);
-      setMyId(peer.id);
+    const removeCallback = p2pService.registerCallback('open', (peerId) => {
+      console.log('me', peerId);
+      setMyId(peerId);
     });
-    return () => sub.unsubscribe();
-  }, [p2pService.peer$]);
+    return () => removeCallback();
+  }, [p2pService]);
 
-  const onClickConnect = () => {
+  const onClickConnect = async () => {
     if (inputPeerId && inputPeerId != '') {
-      p2pService.connect(inputPeerId);
-      game.swapPlayersSides();
-      game.master = true;
+      try {
+        await p2pService.connect(inputPeerId);
+        game.swapPlayersSides();
+        game.master = true;
+      } catch (err) {
+        console.error(err);
+      }
     } else {
       alert('Invalid peer id:' + inputPeerId);
     }

@@ -2,6 +2,7 @@ import * as React from 'react';
 import { hot } from 'react-hot-loader';
 import './App.scss';
 import Debug from './Debug/Debug';
+import Menu from './Menu/Menu';
 import PixiComponent from './PixiComponent/PixiComponent';
 
 const App = () => {

@@ -1,71 +1,160 @@
-import { Subject } from 'rxjs';
+import { ThemeProvider } from '@material-ui/styles';
 import Peer from 'peerjs';
-import React from 'react';
+import Game from '../controllers/Game';
+import { GenericMessage } from '../types/types';
+import { getHandler } from '../util/MessageHandler/MessageHandlerHelpers';
 
-export class P2PService {
-  peer$ = new Subject<Peer>();
-  conn$ = new Subject<Subject<string> | null>();
-  message$: Subject<string> | undefined;
+type Callback = (...args: any[]) => void;
+type Event =
+  | 'open'
+  | 'connection'
+  | 'disconnected'
+  | 'close'
+  | 'error'
+  | 'conn-open'
+  | 'conn-data'
+  | 'conn-close'
+  | 'conn-error';
 
+export default class P2PService {
+  private static instance: P2PService;
   me: Peer;
+  callbackMap: Record<Event, Callback[]> = {
+    open: [],
+    connection: [],
+    disconnected: [],
+    close: [],
+    error: [],
+    'conn-open': [],
+    'conn-data': [],
+    'conn-close': [],
+    'conn-error': [],
+  };
 
-  constructor() {
+  private constructor() {
     this.onConnection = this.onConnection.bind(this);
+    this.callCallbacks = this.callCallbacks.bind(this);
+
+    this.registerCallback('connection', this.onConnection);
+    this.registerCallback('open', () =>
+      console.log('Peer id received!', this.me.id),
+    );
+    this.registerCallback('disconnected', () =>
+      console.log('Peer disconnected from signalling server!', this.me),
+    );
+    this.registerCallback('error', console.log);
+    this.registerCallback('conn-open', () => console.log('Connection opened!'));
+    this.registerCallback('conn-data', (msg) => {
+      msg = JSON.parse(msg) as GenericMessage;
+      const messageHandler = getHandler(msg);
+      if (!messageHandler) {
+        console.warn('No message handler found for', msg);
+        return;
+      }
+      messageHandler.onMessage();
+    });
+    this.registerCallback('conn-close', () => {
+      console.log('Connection closed!');
+      const game = Game.getInstance();
+      game.resetGame();
+      game.resetPlayerPositions();
+    });
+    this.registerCallback('conn-error', () => console.log('Connection error!'));
 
     this.me = new Peer(undefined, { debug: 2 });
-    this.me.on('open', () => this.peer$.next(this.me));
-    this.me.on('connection', this.onConnection);
-    this.me.on('disconnected', () => this.peer$.error('Disconnected'));
-    this.me.on('close', () => this.peer$.complete());
-    this.me.on('error', (err) => this.peer$.error(err));
+    this.me.on('open', (id) => this.callCallbacks('open', id));
+    this.me.on('connection', (connection: Peer.DataConnection) =>
+      this.callCallbacks('connection', connection),
+    );
+    this.me.on('disconnected', () => this.callCallbacks('disconnected'));
+    this.me.on('close', () => this.callCallbacks('close'));
+    this.me.on('error', (err) => this.callCallbacks('error', err));
+
+    console.log('p2pserviceinstance', this);
+  }
+
+  static getInstance(): P2PService {
+    if (!P2PService.instance) {
+      P2PService.instance = new P2PService();
+    }
+    return P2PService.instance;
+  }
+
+  /**
+   *
+   * @param event peer events or connection events prefixed with conn-, e.g. conn-data
+   * @param cb
+   * @returns unsubscribe function
+   */
+  registerCallback(event: Event, cb: Callback): () => void {
+    const cbs = this.callbackMap[event];
+    cbs.push(cb);
+    return () => this.removeCallback(event, cbs.length - 1);
+  }
+
+  private removeCallback(event: Event, idx: number): boolean {
+    const cbs = this.callbackMap[event];
+    if (cbs.length > idx) {
+      cbs.splice(idx, 1);
+      return true;
+    }
+    return false;
+  }
+
+  callCallbacks(event: Event, ...args: any[]): void {
+    const cbs = this.callbackMap[event];
+    // console.log('Calling callbacks for', event, cbs);
+    for (const cb of cbs) {
+      try {
+        cb(...args);
+      } catch (err) {
+        console.error(err);
+      }
+    }
+  }
+
+  getNumConnections(): number {
+    let num = 0;
+    Object.values(
+      this.me.connections as { string: Array<Peer.DataConnection> },
+    ).forEach((val) => val.forEach(() => num++));
+    return num;
   }
 
   private onConnection(conn: Peer.DataConnection) {
-    console.log('New data connection with remote peer!', conn);
+    console.log(
+      'New data connection with remote peer!',
+      conn,
+      this.me.connections,
+    );
 
-    // TODO: add check to only allow one connection
-
-    this.message$ = new Subject<string>();
-    this.conn$.next(this.message$);
-    conn.on('error', (err) => console.error(err));
-    conn.on('open', () => this.peer$.next(this.me));
-    conn.on('data', (data: string) => this.message$.next(data));
-    conn.on('close', () => this.message$.complete());
+    conn.on('open', () => this.callCallbacks('conn-open'));
+    conn.on('data', (data: string) => this.callCallbacks('conn-data', data));
+    conn.on('close', () => this.callCallbacks('conn-close'));
+    conn.on('error', (err) => this.callCallbacks('conn-error', err));
   }
 
-  connect(peerId: string) {
+  connect(peerId: string): Promise<Peer.DataConnection | never> {
     console.log('Connecting to', peerId);
 
-    if (Object.keys(this.me.connections).length > 1) {
-      this.disconnect();
-    }
-
-    // Create connection to destination peer specified in the input field
-    const conn = this.me.connect(peerId, {
-      reliable: true,
+    return new Promise((resolve, reject) => {
+      // Create connection to destination peer specified in the input field
+      const conn = this.me.connect(peerId); // conn will be opened some time later
+      this.registerCallback('conn-open', () => resolve(conn));
+      this.registerCallback('error', reject);
+      this.onConnection(conn);
     });
-
-    console.log('Conn', conn.open);
-    // if (conn.open) {
-    this.onConnection(conn);
-    // return true;
-    // }
-    // return false;
   }
 
-  disconnect(conn?: Peer.DataConnection): void {
-    if (conn) {
-      console.log('[P2PService] Closing connection', conn);
-      conn.close();
-    } else {
-      console.log('Closing all connections');
-      Object.keys(this.me.connections).forEach((key) => {
-        const c = this.me.connections[key];
-        if (c && c.length > 0) {
-          console.log('Closing', c[0]);
-          c[0].close();
-        }
-      });
+  disconnect(): void {
+    console.log('Closing all connections');
+    for (const [remotePeerId, connArr] of Object.entries(
+      this.me.connections as { string: Array<Peer.DataConnection> },
+    )) {
+      for (const connObj of connArr) {
+        console.log('Closing', connObj, 'of peer', remotePeerId);
+        connObj.close();
+      }
     }
   }
 
@@ -101,7 +190,6 @@ export class P2PService {
     }
 
     // console.log('Sending msg over connection:', msg, conn);
-
     if (!(typeof msg === 'string' || msg instanceof String)) {
       msg = JSON.stringify(msg);
     }
@@ -114,7 +202,3 @@ export class P2PService {
     }
   }
 }
-
-export const P2PServiceInstance = new P2PService();
-export const P2PServiceContext = React.createContext(P2PServiceInstance);
-export const useP2PService = () => React.useContext(P2PServiceContext);

@@ -5,10 +5,15 @@ import GameConfig from '../config/GameConfig';
 import { getPlayerIndexAfterScore } from '../util/GameHelpers';
 import Keyboard from './Keyboard';
 import Background from './Background';
-import { Collision, GAME_STATE, NewBallState, Score } from '../types/types';
+import {
+  Collision,
+  GAME_STATE,
+  NewBallState,
+  NewPlayerState,
+  Score,
+} from '../types/types';
 import { rand } from '../util/MathHelpers';
 import {
-  Remote,
   sendBallUpdate,
   sendFinishGame,
   sendMovePlayer,
@@ -41,7 +46,6 @@ export default class Game {
   countDownTime = -1;
 
   master = false;
-  remoteController: Remote = new Remote(this);
 
   GAME_STATE_FN_MAPPING = {
     [GAME_STATE.pause]: undefined,
@@ -78,8 +82,7 @@ export default class Game {
     this.player1.height = this.player2.height = 120;
     this.player1.anchor.set(0.5);
     this.player2.anchor.set(0.5);
-    this.player1.x = GameConfig.screen.padding;
-    this.player2.x = this.app.view.width - GameConfig.screen.padding;
+    this.resetPlayerPositions();
     this.player1.name = GameConfig.player.local.id;
     this.player2.name = GameConfig.player.remote.id;
     this.player1.interactive = true;
@@ -175,8 +178,8 @@ export default class Game {
 
     const collision = this.collisionDetection();
     if (collision) {
+      console.log('Collision', collision);
       this.collisionResponse(collision);
-      sendBallUpdate(this.getBallState());
     }
   }
 
@@ -189,7 +192,7 @@ export default class Game {
     );
     if (countDownTextTime <= 0) {
       this.countDown.visible = false;
-      this.startGameTransition();
+      this.setState(GAME_STATE.play);
       return;
     }
     this.countDown.text = `${countDownTextTime}`;
@@ -206,8 +209,11 @@ export default class Game {
     this.setState(GAME_STATE.start_round);
   }
 
-  startGameTransition(): void {
-    this.setState(GAME_STATE.play);
+  startGameTransition(offset = 0): void {
+    this.resetGame();
+    this.background.triggerWarp(700);
+    this.resetCountdown(offset);
+    this.setState(GAME_STATE.start_round);
   }
 
   finishGameTransition(): void {
@@ -219,22 +225,22 @@ export default class Game {
     const scoreIdx = this.calcScore();
     this.resetBall();
     if (Math.max(...this.score) >= 2) {
-      if (this.isLocalPlayerScoreIdx(scoreIdx)) {
+      if (this.isRemotePlayerScoreIdx(scoreIdx)) {
         sendFinishGame(this.score);
       }
       this.finishGameTransition();
     } else {
-      if (this.isLocalPlayerScoreIdx(scoreIdx)) {
+      if (this.isRemotePlayerScoreIdx(scoreIdx)) {
         sendStartRound({ score: this.score, ball: this.getBallState() });
       }
       this.startRoundTransition();
     }
   }
 
-  isLocalPlayerScoreIdx(scoreIdx: number): boolean {
+  isRemotePlayerScoreIdx(scoreIdx: number): boolean {
     return (
-      (scoreIdx === 0 && this.player1.x < GameConfig.screen.width / 2) ||
-      (scoreIdx === 1 && this.player1.x > GameConfig.screen.width / 2)
+      (scoreIdx === 0 && this.player2.x < GameConfig.screen.width / 2) ||
+      (scoreIdx === 1 && this.player2.x > GameConfig.screen.width / 2)
     );
   }
 
@@ -303,7 +309,9 @@ export default class Game {
     else if (collisionObject === this.player1) {
       anime({
         targets: this.player1,
-        x: this.player1.x - 15,
+        x:
+          this.player1.x +
+          (this.player1.x < GameConfig.screen.width / 2 ? -15 : 15),
         round: 1,
         direction: 'reverse',
         duration: 200,
@@ -312,12 +320,16 @@ export default class Game {
 
       this.ball.vx *= -GameConfig.ball.speedUp;
       this.ball.vy *= GameConfig.ball.speedUp;
+
+      sendBallUpdate(this.getBallState());
     }
     // Remote player
     else if (collisionObject === this.player2) {
       anime({
         targets: this.player2,
-        x: this.player2.x + 15,
+        x:
+          this.player2.x +
+          (this.player2.x < GameConfig.screen.width / 2 ? -15 : 15),
         round: 1,
         direction: 'reverse',
         duration: 200,
@@ -335,6 +347,23 @@ export default class Game {
     this.ball.y = this.app.view.height / 2;
     this.ball.vx = rand(2.0, 5.0) * (Math.random() < 0.5 ? -1 : 1);
     this.ball.vy = rand(-2.0, 2.0);
+  }
+
+  resetScore(): void {
+    this.score = [0, 0];
+    this.scoreText.text = this.getScoreText();
+  }
+
+  resetGame(): void {
+    this.resetBall();
+    this.resetScore();
+    this.setState(GAME_STATE.pause);
+  }
+
+  resetPlayerPositions(): void {
+    this.player1.x = GameConfig.screen.padding;
+    this.player2.x = this.app.view.width - GameConfig.screen.padding;
+    this.player1.y = this.player2.y = this.app.view.height / 2;
   }
 
   resetCountdown(offset = 0): void {
@@ -378,6 +407,14 @@ export default class Game {
     }
   }
 
+  getPlayer1State(): NewPlayerState {
+    return { y: this.player1.y };
+  }
+
+  setPlayer2State({ y }: NewPlayerState): void {
+    this.player2.y = y;
+  }
+
   setScore(score: Score): void {
     this.score = score;
     this.scoreText.text = this.getScoreText();
@@ -403,8 +440,6 @@ export default class Game {
   // Destruction
   destroy(): void {
     console.log('Cleaning up!');
-    this.remoteController.destroy();
-    this.subs.forEach((s) => s.unsubscribe());
     this.app.destroy();
     this.keyObject.unsubscribe();
     Game.instance = undefined;

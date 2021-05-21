@@ -15,8 +15,9 @@ class StartGameMessageHandler extends AbstractMessageHandler<StartGameMessageDat
     console.log('Start game received', this.data);
     const game = Game.getInstance();
     if (game) {
+      const delay = Date.now() - this.timestampCreated;
+      game.startGameTransition(-delay);
       game.setBallState(this.data);
-      game.startRoundTransition();
     }
   }
 }

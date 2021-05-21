@@ -1,7 +1,6 @@
 import React from 'react';
 import Game, { GAME_STATE } from '../../controllers/Game';
-import { useP2PService } from '../../services/P2PService';
-import StartGameMessageHandler from '../../util/MessageHandler/StartGameMessageHandler';
+import { sendStartGame } from '../../controllers/Remote';
 import MenuWrapper from '../MenuWrapper/MenuWrapper';
 
 type ReadyToPlayPropsType = {
@@ -10,12 +9,10 @@ type ReadyToPlayPropsType = {
 
 const ReadyToPlay = ({ open }: ReadyToPlayPropsType): JSX.Element => {
   const game = Game.getInstance();
-  const p2pService = useP2PService();
 
   const onClickPlay = () => {
     const ballState = game.getBallState();
-    const msg = new StartGameMessageHandler(ballState);
-    p2pService.sendMessage(msg);
+    sendStartGame(ballState);
     game.setState(GAME_STATE.start_round);
   };
 

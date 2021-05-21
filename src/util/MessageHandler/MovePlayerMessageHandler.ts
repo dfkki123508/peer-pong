@@ -1,4 +1,4 @@
-import { remotePlayerStore$ } from '../../services/GameStore';
+import Game from '../../controllers/Game';
 import { MESSAGE_EVENTS, MovePlayerMessageDataType } from '../../types/types';
 import AbstractMessageHandler from './AbstractMessageHandler';
 
@@ -12,7 +12,8 @@ class MovePlayerMessageHandler extends AbstractMessageHandler<MovePlayerMessageD
   }
 
   onMessage(): void {
-    remotePlayerStore$.next(this.data);
+    const game = Game.getInstance();
+    game.setPlayer2State(this.data);
   }
 }
 
