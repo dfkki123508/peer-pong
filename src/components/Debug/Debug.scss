@@ -8,6 +8,10 @@
   margin: 1rem;
 }
 
+.playing {
+  visibility: hidden;
+}
+
 .flex-end {
   align-self: flex-end;
 }
@@ -39,7 +43,7 @@ $startBorderRadius: 70% 30% 10% 80% / 70% 30% 80% 30%;
   align-items: center;
   justify-content: center;
   flex-direction: column;
-  padding: 16rem;
+  padding: 4em;
 }
 
 @keyframes morph {
@@ -77,4 +81,13 @@ $startBorderRadius: 70% 30% 10% 80% / 70% 30% 80% 30%;
   //     var(--secondary) 100%
   //   );
   // }
+}
+
+.flex-item {
+  margin-bottom: 1rem;
+}
+
+.code {
+  font-family: monospace;
+  white-space: pre;
 }

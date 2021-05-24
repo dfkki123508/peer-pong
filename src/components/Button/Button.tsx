@@ -5,6 +5,7 @@ type ButtonProps = {
   onClick?: () => void;
   disabled?: boolean;
   children?: JSX.Element | string;
+  className?: string;
 };
 
 const Button = ({ onClick, disabled, children }: ButtonProps) => {

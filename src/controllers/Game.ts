@@ -8,6 +8,7 @@ import Keyboard from './Keyboard';
 import Background from './Background';
 import {
   Collision,
+  GameStateFn,
   GAME_STATE,
   NewBallState,
   NewPlayerState,
@@ -20,8 +21,7 @@ import {
   sendMovePlayer,
   sendStartRound,
 } from './Remote';
-
-type GameStateFn = (delta: number) => void;
+import { gameState$ } from '../services/GameStore';
 
 type Ball = PIXI.Sprite & {
   vx: number;
@@ -38,7 +38,6 @@ export default class Game {
   border: PIXI.Graphics;
   scoreText: PIXI.Text;
   countDown: PIXI.Text;
-  state: GameStateFn | undefined;
   keyObject: Keyboard;
   background: Background;
   stopped = false;
@@ -52,13 +51,18 @@ export default class Game {
 
   master = false;
 
-  GAME_STATE_FN_MAPPING = {
-    [GAME_STATE.pause]: undefined,
-    [GAME_STATE.play]: this.play,
-    [GAME_STATE.start_round]: this.startRoundState,
-  };
+  GAME_STATE_FN_MAPPING: { [key in GAME_STATE]: GameStateFn | undefined };
 
   private constructor() {
+    this.play = this.play.bind(this);
+    this.startRoundState = this.startRoundState.bind(this);
+
+    this.GAME_STATE_FN_MAPPING = {
+      [GAME_STATE.pause]: undefined,
+      [GAME_STATE.play]: this.play,
+      [GAME_STATE.start_round]: this.startRoundState,
+    };
+
     this.app = new PIXI.Application({
       width: GameConfig.screen.width,
       height: GameConfig.screen.height,
@@ -164,7 +168,7 @@ export default class Game {
     };
 
     // set state
-    this.setState(GAME_STATE.pause);
+    gameState$.next(GAME_STATE.pause);
 
     // debug
     // this.app.stop();
@@ -237,7 +241,7 @@ export default class Game {
     );
     if (countDownTextTime <= 0) {
       this.countDown.visible = false;
-      this.setState(GAME_STATE.play);
+      gameState$.next(GAME_STATE.play);
       return;
     }
     this.countDown.text = `${countDownTextTime}`;
@@ -249,21 +253,21 @@ export default class Game {
    * @param offset Shorten or lengthen the timer by @param offset millisecons
    */
   startRoundTransition(offset = 0): void {
-    this.background.triggerWarp(700);
+    this.triggerAnimation(700);
     this.resetCountdown(offset);
-    this.setState(GAME_STATE.start_round);
+    gameState$.next(GAME_STATE.start_round);
   }
 
   startGameTransition(offset = 0): void {
     this.resetGame();
-    this.background.triggerWarp(700);
+    this.triggerAnimation(700);
     this.resetCountdown(offset);
-    this.setState(GAME_STATE.start_round);
+    gameState$.next(GAME_STATE.start_round);
   }
 
   finishGameTransition(): void {
-    this.background.triggerWarp(700);
-    this.setState(GAME_STATE.pause);
+    this.triggerAnimation(700);
+    gameState$.next(GAME_STATE.pause);
   }
 
   scoreTransition(): void {
@@ -386,8 +390,7 @@ export default class Game {
     }
   }
 
-  triggerAnimation() {
-    const duration = 2000;
+  triggerAnimation(duration = 1000): void {
     const blurFilter = new MotionBlurFilter([0, 0], 5);
     this.app.stage.filters = [blurFilter];
     const borderDisplacement = 10;
@@ -435,7 +438,7 @@ export default class Game {
   resetGame(): void {
     this.resetBall();
     this.resetScore();
-    this.setState(GAME_STATE.pause);
+    gameState$.next(GAME_STATE.pause);
   }
 
   resetPlayerPositions(): void {
@@ -469,8 +472,9 @@ export default class Game {
   }
 
   gameLoop(delta: number): void {
-    if (this.state) {
-      this.state(delta);
+    const stateFn = this.getStateFn(gameState$.getValue());
+    if (stateFn) {
+      stateFn(delta);
     }
   }
 
@@ -503,18 +507,19 @@ export default class Game {
     return this.score;
   }
 
-  getState(): GAME_STATE | undefined {
+  getStateFn(state: GAME_STATE): GameStateFn | undefined {
     for (const [key, value] of Object.entries(this.GAME_STATE_FN_MAPPING)) {
-      if (value === this.state) {
-        return +key;
+      if (+key === state) {
+        return value;
       }
     }
   }
 
-  setState(state: GAME_STATE): void {
-    const newState = this.GAME_STATE_FN_MAPPING[state];
-    this.state = newState; // can be undefined
-  }
+  // setState(state: GAME_STATE): void {
+  //   const newState = this.GAME_STATE_FN_MAPPING[state];
+  //   // this.state = newState; // can be undefined
+  //   gameState$.next(newState);
+  // }
 
   // Destruction
   destroy(): void {

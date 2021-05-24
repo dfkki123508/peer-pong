@@ -6,28 +6,57 @@ import StartGameMessageHandler from '../../util/MessageHandler/StartGameMessageH
 import P2PService from '../../services/P2PService';
 import { launchIntoFullscreen, mobileCheck } from '../../util/UiHelpers';
 import Button from '../Button/Button';
+import { gameState$ } from '../../services/GameStore';
+import { useObservable } from '../../util/UseObservable';
+import { GAME_STATE } from '../../types/types';
+import { generateRandomAlphaNumeric } from '../../util/RandStr';
 
 const Debug = () => {
   const p2pService = P2PService.getInstance();
   const [message, setMessage] = React.useState('');
-  const [show, setShow] = React.useState(true);
+  const [playing, setPlaying] = React.useState(false);
   const [inputPeerId, setInputPeerId] = React.useState('');
   const [myId, setMyId] = React.useState(p2pService.me?.id || undefined);
+  const [randStr, setRandStr] = React.useState(generateRandomAlphaNumeric(30));
   const [connected, setConnected] = React.useState(false);
+  const gameState = useObservable(gameState$);
   const game = Game.getInstance();
 
   React.useEffect(() => {
-    const removeCallback = p2pService.registerCallback('open', (peerId) => {
+    const removeCallback1 = p2pService.registerCallback('open', (peerId) => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
       console.log('me', peerId);
       setMyId(peerId);
     });
-    return () => removeCallback();
+    const removeCallback2 = p2pService.registerCallback('conn-close', () => {
+      setConnected(false);
+      setPlaying(false);
+    });
+    const removeCallback3 = p2pService.registerCallback('conn-open', () => {
+      setConnected(true);
+    });
+    return () => {
+      removeCallback1();
+      removeCallback2();
+      removeCallback3();
+    };
   }, [p2pService]);
+
+  const intervalRef = React.useRef<NodeJS.Timeout | undefined>(undefined);
+
+  React.useEffect(() => {
+    intervalRef.current = setInterval(() => {
+      setRandStr(generateRandomAlphaNumeric(30));
+    }, 100);
+  }, []);
 
   const onClickStartGame = () => {
     game.startGameTransition();
     const msg = new StartGameMessageHandler(game.getBallState());
     p2pService.sendMessage(msg);
+    setPlaying(true);
   };
 
   const onClickSend = () => {
@@ -45,6 +74,7 @@ const Debug = () => {
         setConnected(true);
         game.swapPlayersSides();
         game.master = true;
+        setInputPeerId('');
         if (mobileCheck()) {
           launchIntoFullscreen();
         }
@@ -79,69 +109,88 @@ const Debug = () => {
     }
   };
 
+  const getConnectUrl = () => {
+    if (myId) {
+      return `${process.env.BASE_URL}/#connectTo=${myId}`;
+    }
+    return randStr;
+  };
+
   return (
-    <div className="upper-right">
+    <div
+      className={
+        'upper-right' + (gameState !== GAME_STATE.pause ? ' playing' : '')
+      }
+    >
       {/* <button className="flex-end" onClick={() => setShow(!show)}>
         Show
       </button> */}
-      {show && (
-        <div className="container">
-          <div className="shape">
-            <div>
-              <input
+      <div className="container">
+        <div className="shape">
+          {/* <Button onClick={onClickTriggerAnimation}>Animate</Button> */}
+          {connected ? (
+            <>
+              {/* <input
                 type="text"
                 value={message}
                 onChange={(event) => setMessage(event.target.value)}
               />
               <Button onClick={onClickSend} disabled={!connected}>
                 Send
-              </Button>
-              <Button onClick={onClickResetGame}>Reset Game</Button>
-              <Button onClick={onClickStartGame} disabled={!connected}>
-                Start Game
-              </Button>
-              <Button onClick={onClickswapPlayersSides} disabled={!connected}>
+              </Button> */}
+              {/* <Button onClick={onClickResetGame}>Reset Game</Button> */}
+              <div className="flex-item">
+                <Button onClick={onClickStartGame} disabled={!connected}>
+                  Start Game
+                </Button>
+              </div>
+              <div className="flex-item">
+                <Button onClick={onClickDisconnect} disabled={!connected}>
+                  Disconnect
+                </Button>
+              </div>
+              {/* <Button onClick={onClickswapPlayersSides} disabled={!connected}>
                 Swap sides
-              </Button>
-              <Button onClick={onClickFullscreen} disabled={!connected}>
+              </Button> */}
+              {/* <Button onClick={onClickFullscreen} disabled={!connected}>
                 Fullscreen
-              </Button>
-              <Button onClick={onClickTriggerAnimation}>Animate</Button>
-            </div>
-            <div>
-              Your Id: <span className="code">{myId}</span>{' '}
-              <Button onClick={onClickCopy}>Copy!</Button> and send to Player2
-              or
-            </div>
-            <div>
-              <label>Enter</label>
+              </Button> */}
+            </>
+          ) : (
+            <>
+              <h1>Welcome to Peer-Pong</h1>
+              <div className="flex-item">
+                <Button onClick={onClickCopy} disabled={!myId}>
+                  Copy your Id!
+                </Button>
+              </div>
               <input
+                className="flex-item"
                 type="text"
                 placeholder="<Player2 id>"
                 value={inputPeerId}
                 onChange={(event) => setInputPeerId(event.target.value)}
               />
-              <Button onClick={onClickConnect} disabled={!myId}>
-                Connect
-              </Button>
-              <Button onClick={onClickDisconnect} disabled={!connected}>
-                Disconnect
-              </Button>
-            </div>
-            <div className="qrcode">
-              {myId ? (
+              <div className="flex-item">
+                <Button
+                  onClick={onClickConnect}
+                  disabled={!myId}
+                  className="flex-item"
+                >
+                  Connect
+                </Button>
+              </div>
+              <div className="qrcode flex-item">
                 <QRCode
-                  value={`${process.env.BASE_URL}/#connectTo=${myId}`}
+                  value={getConnectUrl()}
                   renderAs={'svg'}
                   includeMargin
                 />
-              ) : (
-                ''
-              )}
-            </div>
-          </div>
+              </div>
+            </>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 };

@@ -12,22 +12,12 @@ const App = () => {
       <div className="game-container">
         <PixiComponent className="game-element" />
       </div>
-      {/* <Button></Button> */}
-      {/* {sketch.getState() === GAME_STATE.pause && (
-        <Menu open={sketch.getState() === GAME_STATE.pause} />
-      )}
-      {sketch.getState() === GAME_STATE. && (
-        <ReadyToPlay open={gameState.step === GAME_STEP.READY_TO_PLAY} />
-      )}
-      {gameState.step === GAME_STEP.FINISHED && (
-        <Result open={gameState.step === GAME_STEP.FINISHED} />
-      )} */}
-
       <Debug />
     </div>
     // <>
     //   <Button>Normal</Button>
     //   <Button disabled>disabled</Button>
+    //   <input />
     // </>
   );
 };

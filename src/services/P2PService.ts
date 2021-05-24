@@ -59,7 +59,9 @@ export default class P2PService {
       game.resetGame();
       game.resetPlayerPositions();
     });
-    this.registerCallback('conn-error', () => console.log('Connection error!'));
+    this.registerCallback('conn-error', (err) =>
+      console.log('Connection error!', err),
+    );
 
     this.me = new Peer(undefined, { debug: 2 });
     this.me.on('open', (id) => this.callCallbacks('open', id));

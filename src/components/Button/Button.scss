@@ -7,6 +7,7 @@
 }
 
 $boxShadow: 2px;
+$boxShadowActive: 1px;
 $margin: 8px;
 
 .btn {
@@ -14,8 +15,6 @@ $margin: 8px;
   display: inline-block;
   width: fit-content;
   height: fit-content;
-  font-size: 1em;
-  font-weight: bold;
   line-height: 60px;
   text-align: center;
   text-transform: uppercase;
@@ -24,11 +23,12 @@ $margin: 8px;
   text-decoration: none;
   font-family: 'Roboto', sans-serif;
   font-weight: 900;
-  font-size: 17px;
+  font-size: 1em;
   letter-spacing: 0.045em;
-  box-shadow: $boxShadow $boxShadow 0px 0px black;
+  box-shadow: $boxShadow $boxShadow 4px 0px black;
   margin: calc(#{$margin} - #{$boxShadow}) $margin $margin
     calc(#{$margin} - #{$boxShadow});
+  user-select: none;
 }
 
 .btn svg {
@@ -70,7 +70,13 @@ $margin: 8px;
 }
 
 .anime:hover svg rect {
-  stroke-width: 4;
+  stroke-width: 6;
+  stroke-dasharray: 1500, 0;
+  stroke-dashoffset: 0;
+}
+
+.anime:active svg rect {
+  stroke-width: 6;
   stroke-dasharray: 1500, 0;
   stroke-dashoffset: 0;
 }

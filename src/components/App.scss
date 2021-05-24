@@ -9,6 +9,8 @@ body {
   margin: 0;
   padding: 0;
   overflow: hidden;
+  font-style: italic;
+  font-family: Verdana, sans-serif;
 }
 
 .app-container {
@@ -31,4 +33,21 @@ body {
 .game-element > * {
   width: 100vw;
   height: 100vh;
+}
+
+input {
+  caret-color: linear-gradient(
+    to right,
+    rgba(255, 130, 130, 1) 0%,
+    rgba(225, 120, 237, 1) 100%
+  );
+  font-size: 2rem;
+  font-family: monospace;
+  border: none;
+  border-bottom: 4px solid black;
+  background: transparent;
+}
+
+input:focus {
+  outline-width: 0;
 }

@@ -107,3 +107,5 @@ export type StartRoundMessageDataType = {
 };
 export type StartGameMessageDataType = NewBallState;
 export type FinishGameMessageDataType = Score;
+
+export type GameStateFn = (delta: number) => void;
