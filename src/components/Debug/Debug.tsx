@@ -4,7 +4,11 @@ import Game from '../../controllers/Game';
 import QRCode from 'qrcode.react';
 import StartGameMessageHandler from '../../util/MessageHandler/StartGameMessageHandler';
 import P2PService from '../../services/P2PService';
-import { launchIntoFullscreen, mobileCheck } from '../../util/UiHelpers';
+import {
+  getHashValue,
+  launchIntoFullscreen,
+  mobileCheck,
+} from '../../util/UiHelpers';
 import Button from '../Button/Button';
 import { gameState$ } from '../../services/GameStore';
 import { useObservable } from '../../util/UseObservable';
@@ -41,6 +45,14 @@ const Debug = () => {
       removeCallback3();
     };
   }, [p2pService]);
+
+  React.useEffect(() => {
+    const peerId = getHashValue('connectTo');
+    console.log('Got hash value', peerId);
+    if (peerId) {
+      setInputPeerId(peerId);
+    }
+  }, []);
 
   const intervalRef = React.useRef<NodeJS.Timeout | undefined>(undefined);
 
@@ -152,7 +164,7 @@ const Debug = () => {
               <div className="flex-item">
                 <Button
                   onClick={onClickConnect}
-                  disabled={!myId}
+                  disabled={!myId || !inputPeerId || inputPeerId === ''}
                   className="flex-item"
                 >
                   Connect

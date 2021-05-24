@@ -16,6 +16,7 @@ class StartRoundMessageHandler extends AbstractMessageHandler<StartRoundMessageD
     const game = Game.getInstance();
     if (game) {
       const delay = Date.now() - this.timestampCreated;
+      console.log('with Delay', delay, 'Created at', this.timestampCreated);
       game.setBallState(this.data.ball);
       game.setScore(this.data.score);
       game.startRoundTransition(-delay);
