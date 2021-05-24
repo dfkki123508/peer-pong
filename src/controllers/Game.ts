@@ -273,7 +273,7 @@ export default class Game {
   scoreTransition(): void {
     const scoreIdx = this.calcScore();
     this.resetBall();
-    if (Math.max(...this.score) >= 2) {
+    if (Math.max(...this.score) >= GameConfig.game.finishScore) {
       if (this.isRemotePlayerScoreIdx(scoreIdx)) {
         sendFinishGame(this.score);
       }

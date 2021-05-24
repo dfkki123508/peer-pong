@@ -14,7 +14,6 @@ import { generateRandomAlphaNumeric } from '../../util/RandStr';
 const Debug = () => {
   const p2pService = P2PService.getInstance();
   const [message, setMessage] = React.useState('');
-  const [playing, setPlaying] = React.useState(false);
   const [inputPeerId, setInputPeerId] = React.useState('');
   const [myId, setMyId] = React.useState(p2pService.me?.id || undefined);
   const [randStr, setRandStr] = React.useState(generateRandomAlphaNumeric(30));
@@ -32,7 +31,6 @@ const Debug = () => {
     });
     const removeCallback2 = p2pService.registerCallback('conn-close', () => {
       setConnected(false);
-      setPlaying(false);
     });
     const removeCallback3 = p2pService.registerCallback('conn-open', () => {
       setConnected(true);
@@ -56,7 +54,6 @@ const Debug = () => {
     game.startGameTransition();
     const msg = new StartGameMessageHandler(game.getBallState());
     p2pService.sendMessage(msg);
-    setPlaying(true);
   };
 
   const onClickSend = () => {
@@ -122,23 +119,10 @@ const Debug = () => {
         'upper-right' + (gameState !== GAME_STATE.pause ? ' playing' : '')
       }
     >
-      {/* <button className="flex-end" onClick={() => setShow(!show)}>
-        Show
-      </button> */}
       <div className="container">
         <div className="shape">
-          {/* <Button onClick={onClickTriggerAnimation}>Animate</Button> */}
           {connected ? (
             <>
-              {/* <input
-                type="text"
-                value={message}
-                onChange={(event) => setMessage(event.target.value)}
-              />
-              <Button onClick={onClickSend} disabled={!connected}>
-                Send
-              </Button> */}
-              {/* <Button onClick={onClickResetGame}>Reset Game</Button> */}
               <div className="flex-item">
                 <Button onClick={onClickStartGame} disabled={!connected}>
                   Start Game
@@ -149,12 +133,6 @@ const Debug = () => {
                   Disconnect
                 </Button>
               </div>
-              {/* <Button onClick={onClickswapPlayersSides} disabled={!connected}>
-                Swap sides
-              </Button> */}
-              {/* <Button onClick={onClickFullscreen} disabled={!connected}>
-                Fullscreen
-              </Button> */}
             </>
           ) : (
             <>
