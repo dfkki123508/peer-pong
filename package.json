@@ -1,6 +1,6 @@
 {
   "name": "peer-pong",
-  "version": "0.1.0",
+  "version": "1.0.1",
   "keywords": [
     "react",
     "webpack",
@@ -14,7 +14,7 @@
   "author": "David Kichsteiger",
   "license": "MIT",
   "scripts": {
-    "build": "yarn run clean-dist && webpack --config=configs/webpack/prod.js",
+    "build": "yarn run clean-dist && echo \"BASE_URL=$BASE_URL\" > .env.prod && webpack --config=configs/webpack/prod.js",
     "clean-dist": "rimraf dist/*",
     "lint": "eslint './src/**/*.{js,ts,tsx}' --quiet",
     "seed-env": "sed -i \"s/BASE_URL=.*/BASE_URL=http:\\/\\/$(hostname -I | awk '{print $1}'):8080/g\" .env.dev",

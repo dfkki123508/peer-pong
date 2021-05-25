@@ -1,5 +1,6 @@
 import * as PIXI from 'pixi.js';
 import GameConfig from '../config/GameConfig';
+import starPng from '../assets/star.png';
 
 const width = 2000;
 const fov = 20;
@@ -20,7 +21,7 @@ export default class Background {
     this.app = app;
 
     // Get the texture for rope.
-    const starTexture = PIXI.Texture.from('src/assets/star.png');
+    const starTexture = PIXI.Texture.from(starPng);
 
     // Create the stars
     for (let i = 0; i < GameConfig.background.numStars; i++) {
