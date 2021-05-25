@@ -6,11 +6,14 @@ import {
   StartRoundMessageDataType,
   StartGameMessageDataType,
   FinishGameMessageDataType,
+  PingMessageDataType,
 } from '../../types/types';
 import AbstractMessageHandler from './AbstractMessageHandler';
 import BallUpdateMessageHandler from './BallUpdateMessageHandler';
 import FinishGameMessageHandler from './FinishGameMessageHandler';
 import MovePlayerMessageHandler from './MovePlayerMessageHandler';
+import PingMessageHandler from './PingMessageHandler';
+import PongMessageHandler from './PongMessageHandler';
 import StartGameMessageHandler from './StartGameMessageHandler';
 import StartRoundMessageHandler from './StartRoundMessageHandler';
 
@@ -41,6 +44,16 @@ export function getHandler(
     case MESSAGE_EVENTS.finish_game:
       return new FinishGameMessageHandler(
         msg.data as FinishGameMessageDataType,
+        msg.timestampCreated,
+      );
+    case MESSAGE_EVENTS.ping:
+      return new PingMessageHandler(
+        msg.data as PingMessageDataType,
+        msg.timestampCreated,
+      );
+    case MESSAGE_EVENTS.pong:
+      return new PongMessageHandler(
+        msg.data as PingMessageDataType,
         msg.timestampCreated,
       );
   }

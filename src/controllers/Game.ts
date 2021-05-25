@@ -49,8 +49,6 @@ export default class Game {
   dragData: PIXI.InteractionData | undefined;
   dragging = false;
 
-  master = false;
-
   GAME_STATE_FN_MAPPING: { [key in GAME_STATE]: GameStateFn | undefined };
 
   private constructor() {
@@ -351,8 +349,20 @@ export default class Game {
     }
     // Left and right borders
     else if (collisionObject === 'left' || collisionObject === 'right') {
-      console.log('SCORE');
-      this.scoreTransition();
+      // Only score if its a local player goal. Otherwise let the other player decide!
+      if (
+        (collisionObject === 'left' &&
+          this.player1.x < GameConfig.screen.width / 2) ||
+        (collisionObject === 'right' &&
+          this.player1.x > GameConfig.screen.width / 2)
+      ) {
+        console.log('SCORE');
+        this.scoreTransition();
+      } else {
+        console.log('Maybe score?!');
+        this.ball.vx *= -GameConfig.ball.speedUp;
+        this.ball.vy *= GameConfig.ball.speedUp;
+      }
     }
     // Local player
     else if (collisionObject === this.player1) {

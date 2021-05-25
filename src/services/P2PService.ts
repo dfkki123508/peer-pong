@@ -3,6 +3,7 @@ import Peer from 'peerjs';
 import Game from '../controllers/Game';
 import { GenericMessage } from '../types/types';
 import { getHandler } from '../util/MessageHandler/MessageHandlerHelpers';
+import PingMessageHandler from '../util/MessageHandler/PingMessageHandler';
 
 type Callback = (...args: any[]) => void;
 type Event =
@@ -30,6 +31,11 @@ export default class P2PService {
     'conn-close': [],
     'conn-error': [],
   };
+  pingInterval: NodeJS.Timeout | undefined;
+  master = false;
+  avgLatencyWindow = 15;
+  lastRtts: Array<number> = [];
+  avgLatency = 0;
 
   private constructor() {
     this.onConnection = this.onConnection.bind(this);
@@ -44,6 +50,19 @@ export default class P2PService {
     );
     this.registerCallback('error', console.log);
     this.registerCallback('conn-open', () => console.log('Connection opened!'));
+    this.registerCallback('conn-open', () => {
+      console.log('Registering ping interval');
+      if (this.pingInterval) {
+        clearInterval(this.pingInterval);
+      }
+      this.pingInterval = setInterval(() => {
+        const msg = new PingMessageHandler({
+          id: 1,
+          pingTimestamp: Date.now(),
+        });
+        this.sendMessage(msg);
+      }, 500);
+    });
     this.registerCallback('conn-data', (msg) => {
       msg = JSON.parse(msg) as GenericMessage;
       const messageHandler = getHandler(msg);
@@ -58,6 +77,9 @@ export default class P2PService {
       const game = Game.getInstance();
       game.resetGame();
       game.resetPlayerPositions();
+      if (this.pingInterval) {
+        clearInterval(this.pingInterval);
+      }
     });
     this.registerCallback('conn-error', (err) =>
       console.log('Connection error!', err),
@@ -115,6 +137,16 @@ export default class P2PService {
     }
   }
 
+  addRttValue(rtt: number): void {
+    this.lastRtts.push(rtt);
+    if (this.lastRtts.length > this.avgLatencyWindow) {
+      this.lastRtts.shift();
+    }
+    const sum = this.lastRtts.reduce((a, b) => a + b, 0);
+    this.avgLatency = sum / 2 / this.lastRtts.length || 0;
+    // console.log('AVG LATENCY:', this.avgLatency, this.lastRtts.length);
+  }
+
   getNumConnections(): number {
     let num = 0;
     Object.values(
@@ -142,8 +174,15 @@ export default class P2PService {
     return new Promise((resolve, reject) => {
       // Create connection to destination peer specified in the input field
       const conn = this.me.connect(peerId); // conn will be opened some time later
-      this.registerCallback('conn-open', () => resolve(conn));
-      this.registerCallback('error', reject);
+      const rmCb = this.registerCallback('conn-open', () => {
+        this.master = true;
+        resolve(conn);
+        rmCb();
+      });
+      const rmCb2 = this.registerCallback('error', (err) => {
+        reject(err);
+        rmCb2();
+      });
       this.onConnection(conn);
     });
   }

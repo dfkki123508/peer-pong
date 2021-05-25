@@ -107,5 +107,11 @@ export type StartRoundMessageDataType = {
 };
 export type StartGameMessageDataType = NewBallState;
 export type FinishGameMessageDataType = Score;
+export type PingMessageDataType = {
+  id: number;
+  pingTimestamp: number;
+  masterTimestamp?: number;
+  slaveTimestamp?: number;
+};
 
 export type GameStateFn = (delta: number) => void;

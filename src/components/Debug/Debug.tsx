@@ -82,7 +82,6 @@ const Debug = () => {
         await p2pService.connect(inputPeerId);
         setConnected(true);
         game.swapPlayersSides();
-        game.master = true;
         setInputPeerId('');
         if (mobileCheck()) {
           launchIntoFullscreen();
